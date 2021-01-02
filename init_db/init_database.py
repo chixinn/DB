@@ -3,7 +3,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String #区分大小写
-from sqlalchemy import create_engine, PrimaryKeyConstraint
+from sqlalchemy import create_engine, PrimaryKeyConstraint,Float
 from sqlalchemy.ext.declarative import declarative_base
 # 创建表中的字段(列)
 from sqlalchemy import Column
@@ -11,12 +11,15 @@ from sqlalchemy import Column
 from sqlalchemy import Integer, String, ForeignKey,Text,LargeBinary,DateTime
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+from init_books import Book
 
 
 #生成 orm 基类
 #这个地方大家都要改连自己本地的
-engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore',encoding='utf-8',echo=True)
+# engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore',encoding='utf-8',echo=True)
+engine = create_engine('postgresql+psycopg2://chixinning:123456@localhost/bookstore',encoding='utf-8',echo=True)
 
+# 暂时只需要跑init_database.py 
 
 Base=declarative_base()
 
@@ -58,25 +61,6 @@ class Store(Base):
 
 
 
-# class Book(Base):
-#     __tablename__ = 'book'
-#     book_id = Column(Integer, primary_key=True)
-#     title = Column(Text, nullable=False)
-#     author = Column(Text)
-#     publisher = Column(Text)
-#     original_title = Column(Text)
-#     translator = Column(Text)
-#     pub_year = Column(Text)
-#     pages = Column(Integer)
-#     original_price = Column(Integer)  # 原价
-#     currency_unit = Column(Text)
-#     binding = Column(Text)
-#     isbn = Column(Text)
-#     author_intro = Column(Text)
-#     book_intro = Column(Text)
-#     content = Column(Text)
-#     tags = Column(Text)
-#     picture = Column(LargeBinary)
 
 # 下面连着3张是信息总表
 # 取消的订单和待付款的订单的区别注意
@@ -122,6 +106,29 @@ class New_order_detail(Base):
         PrimaryKeyConstraint('order_id', 'book_id'),
         {},
     )
+# 遵照数据集的schema
+'''
+create table book
+(
+    id TEXT primary key,
+    title TEXT,
+    author TEXT,
+    publisher TEXT,
+    original_title TEXT,
+    translator TEXT,
+    pub_year TEXT,
+    pages INTEGER,
+    price INTEGER,
+    currency_unit TEXT,
+    binding TEXT,
+    isbn TEXT,
+    author_intro TEXT,
+    book_intro text,
+    content TEXT,
+    tags TEXT,
+    picture BLOB
+);
+'''
 
 class Book(Base):
     __tablename__ = 'book'
@@ -133,16 +140,21 @@ class Book(Base):
     translator = Column(Text)
     pub_year = Column(Text)
     pages = Column(Integer)
-    original_price = Column(Integer) # 原价
-    currency_unit = Column(Text)
+    price=Column(Integer)#货币单位是分 所以价格类型是整数
     binding = Column(Text)
     isbn = Column(Text)
     author_intro = Column(Text)
     book_intro = Column(Text)
     content = Column(Text)
     tags = Column(Text)
-    picture = Column(LargeBinary)
+    # picture_id = Column(String(500),ForeignKey("book_images.picture_id"))
+    picture_id = Column(String(500))
 
+class BookImages(Base):
+    __tablename__ = 'book_images'#postgresql天生不区分大小写
+    picture_id = Column(String(500), primary_key=True)
+    book_id = Column(Integer, ForeignKey("book.book_id"))
+    picture_url = Column(String(500)) # 图片命名：userId + 上传时间戳
 
 DBSession = sessionmaker(bind=engine)
     # 创建session 对象
@@ -154,7 +166,7 @@ def init_testuser():
         User(user_id = 'lalala@ecnu.com',
             
             password = '123456',
-            balance = 10000,#分 所有涉及钱的单位都是分
+            balance = 10000,#分 所有涉及钱的单位都是分:currency_unit TEXT,
             token = '***',
             terminal = 'Chrome'),
         User(user_id = 'hahaa@ecnu.com',
@@ -237,7 +249,7 @@ def init_testorder():
     session.commit()
 def init_books():
     '''
-    导入书的详细信息,这个还要再详细研究book.py
+    导入书的详细信息是主角测试gen_book.py里进行导入的
     '''
     session.add_all([
         Book( book_id =1,

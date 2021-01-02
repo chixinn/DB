@@ -12,3 +12,7 @@ cd 进be/init_db/文件夹, `python init_database.py'
 2. 书的详细信息存储表格的设计
 3. git协作和咋设成私有仓库的还没太学会Orz
 
+# 2021.1.2更新(cxn)
+图书基本schema与助教数据集中schema保持一致
+将图片BLOB数据分离另新建表：
+> 原要求2.核心数据使用关系型数据库（PostgreSQL或MySQL数据库）。 blob数据（如图片和大段的文字描述）可以分离出来存其它NoSQL数据库或文件系统。
