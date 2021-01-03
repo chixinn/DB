@@ -40,6 +40,7 @@ class BookWhole(Base):
     tags = Column(Text,nullable=True)
 
 > 先执行init_database.py，再执行book.py    
+> 如果遇到报错，unable to opendatabase file,是执行文件的路径的问题，需要在DB这个目录下执行 `python init_db/book.py`而不是在 init_db这个目录下执行`python book.py`不然就会报错！！！！
 
 图片另建新表跟检索有关
 所有价格都是分：原爬下来的没单位我也默认成分了。
