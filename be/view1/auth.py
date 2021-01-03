@@ -25,7 +25,7 @@ def logout():
     return jsonify({"message": message}), code
 
 
-@bp_auth.route("/register", methods=["POST","GET"])
+@bp_auth.route("/register", methods=["POST"])
 def register():
     user_id = request.json.get("user_id", "")
     password = request.json.get("password", "")

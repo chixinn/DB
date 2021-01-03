@@ -15,7 +15,7 @@ from datetime import datetime
 
 #生成 orm 基类
 #这个地方大家都要改连自己本地的
-engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore',encoding='utf-8',echo=True)
+engine = create_engine('postgresql://postgres:hsy19991231@localhost:5432/bookstore',encoding='utf-8',echo=True)
 
 
 Base=declarative_base()
