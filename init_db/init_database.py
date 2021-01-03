@@ -3,7 +3,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String #区分大小写
-from sqlalchemy import create_engine, PrimaryKeyConstraint
+from sqlalchemy import create_engine, PrimaryKeyConstraint,Float
 from sqlalchemy.ext.declarative import declarative_base
 # 创建表中的字段(列)
 from sqlalchemy import Column
@@ -11,11 +11,13 @@ from sqlalchemy import Column
 from sqlalchemy import Integer, String, ForeignKey,Text,LargeBinary,DateTime
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+# from init_db.book import BookWhole
 
 
 #生成 orm 基类
 #这个地方大家都要改连自己本地的
-engine = create_engine('postgresql://postgres:hsy19991231@localhost:5432/bookstore',encoding='utf-8',echo=True)
+# engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore',encoding='utf-8',echo=True)
+engine = create_engine('postgresql+psycopg2://chixinning:123456@localhost/bookstore',encoding='utf-8',echo=True)
 
 
 Base=declarative_base()
@@ -58,25 +60,6 @@ class Store(Base):
 
 
 
-# class Book(Base):
-#     __tablename__ = 'book'
-#     book_id = Column(Integer, primary_key=True)
-#     title = Column(Text, nullable=False)
-#     author = Column(Text)
-#     publisher = Column(Text)
-#     original_title = Column(Text)
-#     translator = Column(Text)
-#     pub_year = Column(Text)
-#     pages = Column(Integer)
-#     original_price = Column(Integer)  # 原价
-#     currency_unit = Column(Text)
-#     binding = Column(Text)
-#     isbn = Column(Text)
-#     author_intro = Column(Text)
-#     book_intro = Column(Text)
-#     content = Column(Text)
-#     tags = Column(Text)
-#     picture = Column(LargeBinary)
 
 # 下面连着3张是信息总表
 # 取消的订单和待付款的订单的区别注意
@@ -122,26 +105,30 @@ class New_order_detail(Base):
         PrimaryKeyConstraint('order_id', 'book_id'),
         {},
     )
+# 遵照数据集的schema
 
-class Book(Base):
+
+class BookWhole(Base):
+    # PostgreSQL提供text类型， 它可以存储任何长度的字符串。
     __tablename__ = 'book'
-    book_id = Column(Integer, primary_key=True)
+    book_id = Column(Integer, primary_key=True,autoincrement=True)#自增
     title = Column(Text, nullable=False)
-    author = Column(Text)
-    publisher = Column(Text)
-    original_title = Column(Text)
-    translator = Column(Text)
-    pub_year = Column(Text)
-    pages = Column(Integer)
-    original_price = Column(Integer) # 原价
-    currency_unit = Column(Text)
-    binding = Column(Text)
-    isbn = Column(Text)
-    author_intro = Column(Text)
-    book_intro = Column(Text)
-    content = Column(Text)
-    tags = Column(Text)
-    picture = Column(LargeBinary)
+    author = Column(Text,nullable=True)
+    publisher = Column(Text,nullable=True)
+    original_title = Column(Text,nullable=True)
+    translator = Column(Text,nullable=True)
+    pub_year = Column(Text,nullable=True)
+    pages = Column(Integer,nullable=True)
+    price = Column(Integer,nullable=True)  # 原价
+    binding = Column(Text,nullable=True)
+    isbn = Column(Text,nullable=True)
+    author_intro = Column(Text,nullable=True)
+    book_intro = Column(Text,nullable=True)
+    content = Column(Text,nullable=True)
+    tags = Column(Text,nullable=True)
+
+
+
 
 
 DBSession = sessionmaker(bind=engine)
@@ -154,7 +141,7 @@ def init_testuser():
         User(user_id = 'lalala@ecnu.com',
             
             password = '123456',
-            balance = 10000,#分 所有涉及钱的单位都是分
+            balance = 10000,#分 所有涉及钱的单位都是分:currency_unit TEXT,
             token = '***',
             terminal = 'Chrome'),
         User(user_id = 'hahaa@ecnu.com',
@@ -237,22 +224,28 @@ def init_testorder():
     session.commit()
 def init_books():
     '''
-    导入书的详细信息,这个还要再详细研究book.py
+    导入书的详细信息是助教测试book.py里进行导入的
     '''
+    # 这两杯独特的测试书是我自己加的
     session.add_all([
-        Book( book_id =1,
+        BookWhole( book_id =1,
     title ='DB design Principle'),
-    Book( book_id =2,
+    BookWhole( book_id =2,
     title ='Gone with the wind')
     ])
     session.commit()
+
+
 
 def init_test_all():
     init_testuser()
     init_books()
     init_teststore()
     init_testorder()
-    
+
+#这个要从book信息中进行init
+def init_search_author():
+    return 
 
 def init():
     DBSession = sessionmaker(bind=engine)
@@ -264,6 +257,7 @@ def init():
     session.commit()
     # 关闭session
     session.close()
+
 
 if __name__ == "__main__":
     # 创建数据库
