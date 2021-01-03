@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey, create_engine, Prima
 from sqlalchemy.orm import sessionmaker
 class DBConn:
     def __init__(self):
-        engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore')
+        engine = create_engine('postgresql://postgres:hsy19991231@localhost:5432/bookstore')
         Base = declarative_base()
         DBSession = sessionmaker(bind=engine)
         self.session = DBSession()
