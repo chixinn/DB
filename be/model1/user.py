@@ -180,3 +180,8 @@ class User(db_conn.DBConn):
             return 530, "{}".format(str(e))
         return 200, "ok"
 
+    # 搜索是针对全部用户都拥有的功能
+    # 关键字搜索，参数化搜索方式
+    # 全站店铺搜索与当前店铺搜索
+    # 全文索引优化查找
+    # 范围：题目标签内容(book_intro)

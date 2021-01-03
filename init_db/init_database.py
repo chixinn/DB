@@ -11,7 +11,7 @@ from sqlalchemy import Column
 from sqlalchemy import Integer, String, ForeignKey,Text,LargeBinary,DateTime
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
-from init_books import Book
+# from init_db.book import BookWhole
 
 
 #生成 orm 基类
@@ -19,7 +19,6 @@ from init_books import Book
 # engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore',encoding='utf-8',echo=True)
 engine = create_engine('postgresql+psycopg2://chixinning:123456@localhost/bookstore',encoding='utf-8',echo=True)
 
-# 暂时只需要跑init_database.py 
 
 Base=declarative_base()
 
@@ -107,54 +106,30 @@ class New_order_detail(Base):
         {},
     )
 # 遵照数据集的schema
-'''
-create table book
-(
-    id TEXT primary key,
-    title TEXT,
-    author TEXT,
-    publisher TEXT,
-    original_title TEXT,
-    translator TEXT,
-    pub_year TEXT,
-    pages INTEGER,
-    price INTEGER,
-    currency_unit TEXT,
-    binding TEXT,
-    isbn TEXT,
-    author_intro TEXT,
-    book_intro text,
-    content TEXT,
-    tags TEXT,
-    picture BLOB
-);
-'''
 
-class Book(Base):
+
+class BookWhole(Base):
+    # PostgreSQL提供text类型， 它可以存储任何长度的字符串。
     __tablename__ = 'book'
-    book_id = Column(Integer, primary_key=True)
+    book_id = Column(Integer, primary_key=True,autoincrement=True)#自增
     title = Column(Text, nullable=False)
-    author = Column(Text)
-    publisher = Column(Text)
-    original_title = Column(Text)
-    translator = Column(Text)
-    pub_year = Column(Text)
-    pages = Column(Integer)
-    price=Column(Integer)#货币单位是分 所以价格类型是整数
-    binding = Column(Text)
-    isbn = Column(Text)
-    author_intro = Column(Text)
-    book_intro = Column(Text)
-    content = Column(Text)
-    tags = Column(Text)
-    # picture_id = Column(String(500),ForeignKey("book_images.picture_id"))
-    picture_id = Column(String(500))
+    author = Column(Text,nullable=True)
+    publisher = Column(Text,nullable=True)
+    original_title = Column(Text,nullable=True)
+    translator = Column(Text,nullable=True)
+    pub_year = Column(Text,nullable=True)
+    pages = Column(Integer,nullable=True)
+    price = Column(Integer,nullable=True)  # 原价
+    binding = Column(Text,nullable=True)
+    isbn = Column(Text,nullable=True)
+    author_intro = Column(Text,nullable=True)
+    book_intro = Column(Text,nullable=True)
+    content = Column(Text,nullable=True)
+    tags = Column(Text,nullable=True)
 
-class BookImages(Base):
-    __tablename__ = 'book_images'#postgresql天生不区分大小写
-    picture_id = Column(String(500), primary_key=True)
-    book_id = Column(Integer, ForeignKey("book.book_id"))
-    picture_url = Column(String(500)) # 图片命名：userId + 上传时间戳
+
+
+
 
 DBSession = sessionmaker(bind=engine)
     # 创建session 对象
@@ -249,22 +224,28 @@ def init_testorder():
     session.commit()
 def init_books():
     '''
-    导入书的详细信息是主角测试gen_book.py里进行导入的
+    导入书的详细信息是助教测试book.py里进行导入的
     '''
+    # 这两杯独特的测试书是我自己加的
     session.add_all([
-        Book( book_id =1,
+        BookWhole( book_id =1,
     title ='DB design Principle'),
-    Book( book_id =2,
+    BookWhole( book_id =2,
     title ='Gone with the wind')
     ])
     session.commit()
+
+
 
 def init_test_all():
     init_testuser()
     init_books()
     init_teststore()
     init_testorder()
-    
+
+#这个要从book信息中进行init
+def init_search_author():
+    return 
 
 def init():
     DBSession = sessionmaker(bind=engine)
@@ -276,6 +257,7 @@ def init():
     session.commit()
     # 关闭session
     session.close()
+
 
 if __name__ == "__main__":
     # 创建数据库
