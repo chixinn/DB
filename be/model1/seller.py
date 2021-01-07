@@ -43,7 +43,18 @@ class Seller(db_conn.DBConn):
             #由于助教给的body里没有currency_unit所以这里没有加入该值
             #如需后期加入 在insert 中更改即可
             print("bookprice",book['price'])
-            self.session.execute(
+            ##重要！！！！！
+            #判断书是否已经加在书里
+            row = self.session.execute("SELECT book_id FROM book WHERE book_id = '%s';" % (book_id,)).fetchone()
+            if row is None:
+                book = json.loads(book_json_str)
+                thelist = []  # 由于没有列表类型，故使用将列表转为text的办法
+                for tag in book.get('tags'):
+                    if tag.strip() != "":
+                        # book.tags.append(tag)
+                        thelist.append(tag)
+                book['tags'] = str(thelist) 
+                self.session.execute(
                         "INSERT into book( book_id, title,author,publisher,original_title,translator,"
                         "pub_year,pages,original_price,binding,isbn,author_intro,book_intro,"
                         "content,tags) VALUES ( :book_id, :title,:author,:publisher,:original_title,:translator,"
@@ -57,7 +68,7 @@ class Seller(db_conn.DBConn):
                          'binding': book['binding'], 'isbn': book['isbn'], 'author_intro': book['author_intro'],
                          'book_intro': book['book_intro'],
                          'content': book['content'], 'tags': book['tags']})
-            print("book info success")
+                print("book info success")
             self.session.execute("INSERT into store(store_id, book_id,  stock_level,price) VALUES ('%s', %d,  %d,%d)"%(store_id, int(book_id),  stock_level,book['price']))
             self.session.commit()
         except sqlite.Error as e:

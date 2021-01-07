@@ -36,7 +36,7 @@ class BookDB:
         if large:
             self.book_db = self.db_l
         else:
-            self.book_db = self.db_s
+            self.book_db = "D:/这学期/数据管理系统/大作业/项目/DB/fe/data/book.db"
 
     def get_book_count(self):
         conn = sqlite.connect(self.book_db)
@@ -93,5 +93,4 @@ class BookDB:
             # print(tags)
 
         return books
-
 
