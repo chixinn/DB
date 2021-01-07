@@ -8,7 +8,7 @@ from sqlalchemy import create_engine  #, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, ForeignKey, create_engine, PrimaryKeyConstraint, Text, DateTime, Boolean, LargeBinary
 from sqlalchemy.orm import sessionmaker
-engine = create_engine('postgresql+psycopg2://chixinning:123456@localhost/bookstore',encoding='utf-8',echo=True)
+engine = create_engine('postgresql+psycopg2://postgres:123456@localhost/bookstore',encoding='utf-8',echo=True)
 Base = declarative_base()
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
@@ -48,7 +48,7 @@ class BookWhole(Base):
     translator = Column(Text,nullable=True)
     pub_year = Column(Text,nullable=True)
     pages = Column(Integer,nullable=True)
-    price = Column(Integer,nullable=True)  # 原价
+    original_price = Column(Integer,nullable=True)  # 原价
     binding = Column(Text,nullable=True)
     isbn = Column(Text,nullable=True)
     author_intro = Column(Text,nullable=True)
@@ -71,9 +71,9 @@ class BookDB:
         print(self.db_l)
         print("*********************************************")
         if large:
-            self.book_db = self.db_s
-        else:
             self.book_db = self.db_l
+        else:
+            self.book_db = "D:/这学期/数据管理系统/大作业/项目/DB/fe/data/book.db"
 
     def get_book_count(self):
         conn = sqlite.connect(self.book_db)
@@ -105,7 +105,7 @@ class BookDB:
             book.translator = row[5]
             book.pub_year = row[6]
             book.pages = row[7]
-            book.price = row[8]
+            book.original_price = row[8]
 
             book.currency_unit = row[9]
             book.binding = row[10]
@@ -149,11 +149,12 @@ class BookDB:
             "isbn, author_intro, book_intro, "
             "content, tags, picture FROM book ORDER BY id "
             "LIMIT ? OFFSET ?", (size, start))
+
         for row in cursor:
             book = BookWhole()
             book_pic=BookImages()
             # book=BookWhole(title=row[1],author=row[2],publisher=row[3],)
-            book.book_id = row[0]
+            # book.book_id = row[0]
             book.title = row[1]
             book.author = row[2]
             book.publisher = row[3]
@@ -164,7 +165,7 @@ class BookDB:
             # 这里加一个单位处理，统一换成分，
             # 我们的schema中的单位都是分
             price = row[8]
-            book.price=price*100
+            book.original_price=price*100
             book.binding = row[10]
             book.isbn = row[11]
             book.author_intro = row[12]
@@ -182,7 +183,6 @@ class BookDB:
             #     # book.picture=picture
             #     book_pic.book_id=book.book_id
             #     book_pic.picture_url=picture#这里暂时不是URL，先别管
-            # print(book)
             session.add(book)
             # session.add(book_pic)
             session.commit()

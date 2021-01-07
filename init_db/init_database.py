@@ -17,7 +17,7 @@ from datetime import datetime
 #生成 orm 基类
 #这个地方大家都要改连自己本地的
 # engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore',encoding='utf-8',echo=True)
-engine = create_engine('postgresql+psycopg2://chixinning:123456@localhost/bookstore',encoding='utf-8',echo=True)
+engine = create_engine('postgresql+psycopg2://postgres:123456@localhost/bookstore',encoding='utf-8',echo=True)
 
 
 Base=declarative_base()
@@ -27,7 +27,7 @@ Base=declarative_base()
 # 用户表
 class User(Base):
     __tablename__ = 'usr'
-    user_id = Column(String(128), primary_key=True,unique=True)# 类比loginaccount类比注册邮箱那种?
+    user_id = Column(String(256), primary_key=True,unique=True)# 类比loginaccount类比注册邮箱那种?
     #username= Column(String(128),nullable=False,unique=True)# 用户名 #哪一个是主键存疑
     password = Column(String(128), nullable=False)
     balance = Column(Integer, nullable=False)
@@ -38,8 +38,8 @@ class User(Base):
 # 用户商店关系表
 class User_store(Base):
     __tablename__ = 'user_store'
-    user_id = Column(String(128), ForeignKey('usr.user_id'), nullable=False, index = True)
-    store_id = Column(String(128), nullable=False, unique=True, index = True) # 这里的store不可能重复
+    user_id = Column(String(256), ForeignKey('usr.user_id'), nullable=False, index = True)
+    store_id = Column(String(256), nullable=False, unique=True, index = True) # 这里的store不可能重复
     __table_args__ = (
         PrimaryKeyConstraint('user_id', 'store_id'),
         {},
@@ -49,7 +49,7 @@ class User_store(Base):
 # 商店表（含书本信息）
 class Store(Base):
     __tablename__ = 'store'
-    store_id = Column(String(128), ForeignKey('user_store.store_id'), nullable=False, index = True)
+    store_id = Column(String(256), ForeignKey('user_store.store_id'), nullable=False, index = True)
     book_id = Column(Integer, ForeignKey('book.book_id'), nullable=False, index = True)
     stock_level = Column(Integer, nullable=False)
     price = Column(Integer, nullable=False)  # 售价
@@ -66,9 +66,9 @@ class Store(Base):
 # 待付款订单
 class New_order_unpaid(Base):
     __tablename__ = 'new_order_unpaid'
-    order_id = Column(String(128), primary_key=True)
-    buyer_id = Column(String(128), ForeignKey('usr.user_id'), nullable=False)
-    store_id = Column(String(128), ForeignKey('user_store.store_id'), nullable=False)
+    order_id = Column(String(512), primary_key=True)
+    buyer_id = Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    store_id = Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
     price = Column(Integer, nullable=False)
     commit_time = Column(DateTime, nullable=False)#订单下单提交时间
 
@@ -76,9 +76,9 @@ class New_order_unpaid(Base):
 # 待发货订单
 class New_order_undelivered(Base):
     __tablename__ = 'new_order_undelivered'
-    order_id = Column(String(128), primary_key=True)
-    buyer_id = Column(String(128), ForeignKey('usr.user_id'), nullable=False)
-    store_id = Column(String(128), ForeignKey('user_store.store_id'), nullable=False)
+    order_id = Column(String(512), primary_key=True)
+    buyer_id = Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    store_id = Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
     price = Column(Integer, nullable=False)
     purchase_time = Column(DateTime, nullable=False)
 
@@ -86,9 +86,9 @@ class New_order_undelivered(Base):
 # 待收货订单
 class New_order_unreceived(Base):
     __tablename__ = 'new_order_unreceived'
-    order_id = Column(String(128), primary_key=True)
-    buyer_id = Column(String(128), ForeignKey('usr.user_id'), nullable=False)
-    store_id = Column(String(128), ForeignKey('user_store.store_id'), nullable=False)
+    order_id = Column(String(512), primary_key=True)
+    buyer_id = Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    store_id = Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
     price = Column(Integer, nullable=False)
     purchase_time = Column(DateTime, nullable=False)
     receive_time = Column(DateTime, nullable=True) # yzySchema也是加了status
@@ -97,7 +97,7 @@ class New_order_unreceived(Base):
 # 订单明细表
 class New_order_detail(Base):
     __tablename__ = 'new_order_detail'
-    order_id = Column(String(128), nullable=False)
+    order_id = Column(String(512), nullable=False)
     book_id = Column(Integer, nullable=False)
     count = Column(Integer, nullable=False)
     price = Column(Integer, nullable=False)
@@ -119,7 +119,7 @@ class BookWhole(Base):
     translator = Column(Text,nullable=True)
     pub_year = Column(Text,nullable=True)
     pages = Column(Integer,nullable=True)
-    price = Column(Integer,nullable=True)  # 原价
+    original_price = Column(Integer,nullable=True)  # 原价
     binding = Column(Text,nullable=True)
     isbn = Column(Text,nullable=True)
     author_intro = Column(Text,nullable=True)
