@@ -8,8 +8,8 @@ from be.model1 import db_conn
 from be.model1 import error
 from datetime import datetime
 import time
-from init_db.init_database import Store
-from init_db.init_database import New_order_detail
+from init_db.init_database import Store,Users,User_store
+from init_db.init_database import New_order_detail,New_order_undelivered
 from init_db.init_database import New_order_unpaid
 class Buyer(db_conn.DBConn):
     def __init__(self):
@@ -111,16 +111,20 @@ class Buyer(db_conn.DBConn):
             # cursor = conn.execute("SELECT order_id, user_id, store_id FROM new_order WHERE order_id = ?", (order_id,))
             # row = cursor.fetchone()
             #待支付中是否有该用户该订单
-            row = self.session.execute(
-            "SELECT buyer_id,price,store_id FROM new_order_unpaid WHERE order_id = '%s'" % (order_id)).fetchone()
+            # row = self.session.execute(
+            # "SELECT buyer_id,price,store_id FROM new_order_unpaid WHERE order_id = '%s'" % (order_id)).fetchone()
+            row=self.session.query(New_order_unpaid).filter_by(order_id=order_id).first()
             print(row)
             if row is None:
                 return error.error_invalid_order_id(order_id)
 
-            #order_id = row[0]
-            buyer_id = row[0]
-            price=row[1]
-            store_id = row[2]
+            
+            # buyer_id = row[0]
+            # price=row[1]
+            # store_id = row[2]
+            buyer_id=row.buyer_id
+            price=row.price
+            store_id=row.store_id
 
             if buyer_id != user_id:
                 return error.error_authorization_fail()
@@ -128,47 +132,63 @@ class Buyer(db_conn.DBConn):
             # cursor = conn.execute("SELECT balance, password FROM user WHERE user_id = ?;", (buyer_id,))
             # row = cursor.fetchone()
             # 检查密码 余额
-            row = self.session.execute(
-            "SELECT balance, password FROM usr WHERE user_id = '%s';" % (buyer_id)).fetchone()
+            # row = self.session.execute(
+            # "SELECT balance, password FROM usr WHERE user_id = '%s';" % (buyer_id)).fetchone()
+            row=self.session.query(Users).filter_by(user_id=buyer_id).first()
+            
             if row is None:
                 return error.error_non_exist_user_id(buyer_id)
-            balance = row[0]
-            if password != row[1]:
+            check_password=row.password
+            balance=row.balance
+            #balance = row[0]
+            #if password != row[1]:
+            if password !=check_password:
                 return error.error_authorization_fail()
             #记录卖家id
-            cursor = self.session.execute("SELECT store_id, user_id FROM user_store WHERE store_id = '%s';"%(store_id))
-            row = cursor.fetchone()
+            # cursor = self.session.execute("SELECT store_id, user_id FROM user_store WHERE store_id = '%s';"%(store_id))
+            # row = cursor.fetchone()
+            row=self.session.query(User_store).filter_by(store_id=store_id).first()
             if row is None:
                 return error.error_non_exist_store_id(store_id)
 
-            seller_id = row[1]
+            #seller_id = row[1]
+            seller_id=row.user_id
 
             if not self.user_id_exist(seller_id):
                 return error.error_non_exist_user_id(seller_id)
 
-            cursor = self.session.execute("SELECT book_id, count, price FROM new_order_detail WHERE order_id = '%s';"%(order_id))
+            #cursor = self.session.execute("SELECT book_id, count, price FROM new_order_detail WHERE order_id = '%s';"%(order_id))
+            cursor = self.session.query(New_order_detail).filter_by(order_id=order_id)
             total_price = 0
-            for row in cursor:
-                count = row[1]
-                price = row[2]
+            for row in cursor.all():
+                count = row.count
+                price = row.price
                 total_price = total_price + price * count
 
             if balance < total_price:
                 return error.error_not_sufficient_funds(order_id)
             #买家支付 余额扣钱
-            cursor = self.session.execute("UPDATE usr set balance = balance - %d WHERE user_id = '%s' AND balance >= %d"%(total_price, buyer_id, total_price))
-            if cursor.rowcount == 0:
+            #cursor = self.session.execute("UPDATE usr set balance = balance - %d WHERE user_id = '%s' AND balance >= %d"%(total_price, buyer_id, total_price))
+            cursor = self.session.query(Users).filter(Users.user_id==buyer_id, Users.balance>=total_price)
+            rowcount = cursor.update({Users.balance: Users.balance - total_price})
+            if rowcount == 0:
                 return error.error_not_sufficient_funds(order_id)
             #卖家加钱
-            cursor = self.session.execute("UPDATE usr set balance = balance + %d WHERE user_id = '%s'"%(total_price, seller_id))
-
-            if cursor.rowcount == 0:
+            #cursor = self.session.execute("UPDATE usr set balance = balance + %d WHERE user_id = '%s'"%(total_price, seller_id))
+            cursor = self.session.query(Users).filter(Users.user_id==seller_id)
+            rowcount = cursor.update({Users.balance: Users.balance + total_price})
+            if rowcount == 0:
                 return error.error_non_exist_user_id(seller_id)
             # 删除待付订单
-            cursor = self.session.execute("DELETE FROM new_order_unpaid WHERE order_id = '%s';"% (order_id ))
+            #cursor = self.session.execute("DELETE FROM new_order_unpaid WHERE order_id = '%s';"% (order_id ))
+            
+            query = self.session.query(New_order_unpaid).filter(New_order_unpaid.order_id == order_id)
+            query.delete()
             print("*****")
-            print(cursor.rowcount)
-            if cursor.rowcount == 0:
+            rowcount=query.first()
+            #print(cursor.rowcount)
+            #if cursor.rowcount == 0:
+            if rowcount==0:
                 return error.error_invalid_order_id(order_id)
             #删除订单的详细信息
             #还未发货暂不删除订单详细信息
@@ -179,10 +199,18 @@ class Buyer(db_conn.DBConn):
             #在待发货中加入该订单
             timenow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print("******")
-            re=self.session.execute(
-            "INSERT INTO new_order_undelivered(order_id, buyer_id,store_id,price,purchase_time) VALUES('%s', '%s','%s',%d,'%s');" % (
-                order_id, buyer_id, store_id, price,timenow))
-            print(re.rowcount)
+            new_orde = New_order_undelivered(
+                order_id=order_id,
+                buyer_id = buyer_id ,
+                store_id=store_id,
+                price=price,
+                purchase_time=timenow
+            )
+            self.session.add(new_orde)
+            # re=self.session.execute(
+            # "INSERT INTO new_order_undelivered(order_id, buyer_id,store_id,price,purchase_time) VALUES('%s', '%s','%s',%d,'%s');" % (
+            #     order_id, buyer_id, store_id, price,timenow))
+            # print(re.rowcount)
             #self.session.commit()
             self.session.commit()
 
@@ -196,22 +224,26 @@ class Buyer(db_conn.DBConn):
 #买家充值
     def add_funds(self, user_id, password, add_value) -> (int, str):
         try:
-            usr = self.session.execute("SELECT password  from usr where user_id= '%s'"%(user_id,)).fetchone()
+            usr = self.session.query(Users).filter_by(user_id=user_id).first()
+            #usr = self.session.execute("SELECT password  from usr where user_id= '%s'"%(user_id,)).fetchone()
             #row = cursor.fetchone()
             if usr is None:
                 return error.error_authorization_fail()
 
-            if usr[0] != password:
+            if usr.password != password:
                 return error.error_authorization_fail()
-
-            cursor = self.session.execute(
-                "UPDATE usr SET balance = balance + %d WHERE user_id = '%s'"%
-                (add_value, user_id))
+            cursor = self.session.query(Users).filter(Users.user_id==user_id)
+            rowcount = cursor.update({Users.balance: Users.balance + add_value})
+            # cursor = self.session.execute(
+            #     "UPDATE usr SET balance = balance + %d WHERE user_id = '%s'"%
+            #     (add_value, user_id))
             
-            if cursor.rowcount == 0:
+            #if cursor.rowcount == 0:
+            if rowcount==0:
                 return error.error_non_exist_user_id(user_id)
 
             self.session.commit()
+            self.session.close()
         except sqlite.Error as e:
             return 528, "{}".format(str(e))
         except BaseException as e:
