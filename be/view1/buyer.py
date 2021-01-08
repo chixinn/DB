@@ -40,6 +40,20 @@ def add_funds():
     b = Buyer()
     code, message = b.add_funds(user_id, password, add_value)
     return jsonify({"message": message}), code
+
+
+#收货
+@bp_buyer.route("/receive_book", methods=["POST"])
+def receive_books():
+    user_id: str = request.json.get("user_id") #判断该订单是不是该店家的
+    order_id: str = request.json.get("order_id")
+    print(user_id,order_id)
+    b=Buyer()
+    code, message = b.receive_book(user_id,order_id)
+
+    return jsonify({"message":message}),code
+
+
 @bp_buyer.route("/search_book_author", methods=["POST"])
 def search_book_author_like():
     store_id=request.json.get("store_id")

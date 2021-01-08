@@ -4,7 +4,10 @@ sys.path.append("../")
 from be.model1 import error
 from be.model1 import db_conn
 import json
-from init_db.init_database import BookWhole,Store,User_store
+from datetime import datetime
+from init_db.init_database import BookWhole,Store,User_store,Users
+from init_db.init_database import New_order_detail,New_order_undelivered
+from init_db.init_database import New_order_unpaid,New_order_unreceived
 
 class Seller(db_conn.DBConn):
 
@@ -148,3 +151,52 @@ class Seller(db_conn.DBConn):
         except BaseException as e:
             return 530, "{}".format(str(e))
         return 200, "ok"
+
+    #将new_order_undelivered的订单删掉，添加了new_order_unreceived
+    def deliver_book(self,user_id:str,order_id:str):
+        try:
+            #判断该用户是否存在
+            if not self.user_id_exist(user_id):
+                return error.error_non_exist_user_id(user_id) + (order_id, )
+            print("用户存在")
+            #判断该订单是否存在
+            row=self.session.query(New_order_undelivered).filter_by(order_id=order_id)
+            order=row.first()
+            print("未发货订单",order)
+            if order is None:
+                return error.error_invalid_order_id(order_id)
+            
+            store_id=order.store_id
+            #判断该用户是否有这个店铺。。。。验证发货的人是否正确
+            query=self.session.query(User_store).filter_by(store_id=store_id).first()
+            seller_id=query.user_id
+            if seller_id != user_id:
+                return error.error_authorization_fail()
+            
+            #有该订单，发货
+            buyer_id=order.buyer_id
+            price=order.price
+
+            #删除未发货
+            row.delete()
+
+            #添加已发货
+            timenow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print("******已发货")
+            new_order=New_order_unreceived(
+                order_id=order_id,
+                buyer_id=buyer_id,
+                store_id=store_id,
+                price=price,
+                purchase_time=timenow,
+                receive_time=None
+            )
+            self.session.add(new_order)
+            self.session.commit()
+
+        except sqlite.Error as e:
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            return 530, "{}".format(str(e))
+        return 200, "ok"
+
