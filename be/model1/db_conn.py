@@ -5,6 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, ForeignKey, create_engine, PrimaryKeyConstraint
 from sqlalchemy.orm import sessionmaker
+from init_db.init_database import Users
+from init_db.init_database import User_store
 class DBConn:
     def __init__(self):
         engine = create_engine('postgresql://postgres:123456@localhost:5432/bookstore')
@@ -16,7 +18,8 @@ class DBConn:
     def user_id_exist(self, user_id):
         # cursor = self.conn.execute("SELECT user_id FROM user WHERE user_id = ?;", (user_id,))
         # row = cursor.fetchone()
-        user=self.session.execute("SELECT user_id FROM usr WHERE user_id = '%s';" % (user_id,)).fetchone()
+        # user=self.session.execute("SELECT user_id FROM usr WHERE user_id = '%s';" % (user_id,)).fetchone()
+        user=self.session.query(Users).filter_by(user_id=user_id).first()
         if user is None:
             return False
         else:
@@ -34,7 +37,8 @@ class DBConn:
     def store_id_exist(self, store_id):
         # cursor = self.conn.execute("SELECT store_id FROM user_store WHERE store_id = ?;", (store_id,))
         # row = cursor.fetchone()
-        store=self.session.execute("SELECT store_id FROM user_store WHERE store_id = '%s';" % (store_id,)).fetchone()
+        # store=self.session.execute("SELECT store_id FROM user_store WHERE store_id = '%s';" % (store_id,)).fetchone()
+        store=self.session.query(User_store).filter_by(store_id=store_id).first()
         if store is None:
             return False
         else:

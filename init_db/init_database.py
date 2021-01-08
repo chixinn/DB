@@ -25,7 +25,7 @@ Base=declarative_base()
 
 # 按照schema创建数据库
 # 用户表
-class User(Base):
+class Users(Base):
     __tablename__ = 'usr'
     user_id = Column(String(256), primary_key=True,unique=True)# 类比loginaccount类比注册邮箱那种?
     #username= Column(String(128),nullable=False,unique=True)# 用户名 #哪一个是主键存疑
@@ -138,19 +138,19 @@ def init_testuser():
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     session.add_all([
-        User(user_id = 'lalala@ecnu.com',
+        Users(user_id = 'lalala@ecnu.com',
             
             password = '123456',
             balance = 10000,#分 所有涉及钱的单位都是分:currency_unit TEXT,
             token = '***',
             terminal = 'Chrome'),
-        User(user_id = 'hahaa@ecnu.com',
+        Users(user_id = 'hahaa@ecnu.com',
             
             password = '123456',
             balance =8000,
             token = '***',
             terminal='Safari'),
-        User(user_id = 'lululu@ecnu.com',
+        Users(user_id = 'lululu@ecnu.com',
             
             password = '123456',
             balance = 9000,

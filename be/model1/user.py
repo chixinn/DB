@@ -8,7 +8,7 @@ sys.path.append("../")
 import sqlite3 as sqlite
 from be.model1 import error
 from be.model1 import db_conn
-
+from init_db.init_database import Users
 # encode a json string like:
 #   {
 #       "user_id": [user name],
@@ -51,7 +51,15 @@ class User(db_conn.DBConn):
             #     "INSERT into user(user_id, password, balance, token, terminal) "
             #     "VALUES (?, ?, ?, ?, ?);",
             #     (user_id, password, 0, token, terminal), )
-            self.session.execute( "INSERT INTO usr (user_id, password, balance, token, terminal) values (:user_id, :password, 0, :token, :terminal)",{"user_id":user_id,"password": password,"token":token,"terminal":terminal })
+            # self.session.execute( "INSERT INTO usr (user_id, password, balance, token, terminal) values (:user_id, :password, 0, :token, :terminal)",{"user_id":user_id,"password": password,"token":token,"terminal":terminal })
+            new_usr = Users(
+                user_id=user_id,
+                password = password,
+                balance = 0,
+                token = token,
+                terminal = terminal
+            )
+            self.session.add(new_usr)
             self.session.commit()
         except sqlite.Error:
             return error.error_exist_user_id(user_id)
@@ -62,8 +70,15 @@ class User(db_conn.DBConn):
             if code != 200:
                 return code, message
 
-            cursor = self.session.execute("DELETE from usr where user_id='%s'"% (user_id,))
-            if cursor.rowcount == 1:
+            # cursor = self.session.execute("DELETE from usr where user_id='%s'"% (user_id,))
+            # if cursor.rowcount == 1:
+            #     self.session.commit()
+            # else:
+            #     return error.error_authorization_fail()
+            query = self.session.query(Users).filter(Users.user_id == user_id)
+            query.delete()
+
+            if query.first() is None:
                 self.session.commit()
             else:
                 return error.error_authorization_fail()
@@ -90,24 +105,27 @@ class User(db_conn.DBConn):
 
     def check_token(self, user_id: str, token: str) -> (int, str):
         #cursor = self.session.execute("SELECT token from user where user_id=?", (user_id,))
-        row=self.session.execute("SELECT token from usr where user_id='%s'" % (user_id)).fetchone()
+        #row=self.session.execute("SELECT token from usr where user_id='%s'" % (user_id)).fetchone()
         #row = cursor.fetchone()
+        row=self.session.query(Users).filter(Users.user_id==user_id).first()
         if row is None:
             return error.error_authorization_fail()
-        db_token = row[0]
+        # db_token = row[0]
+        db_token = row.token
         if not self.__check_token(user_id, db_token, token):
             return error.error_authorization_fail()
         return 200, "ok"
 
     def check_password(self, user_id: str, password: str) -> (int, str):
-        row=self.session.execute("SELECT password from usr where user_id=:user_id",
-                                        {"user_id": user_id}).fetchone()
+        # row=self.session.execute("SELECT password from usr where user_id=:user_id",
+        #                                 {"user_id": user_id}).fetchone()
         #row= self.session.execute("SELECT password from user where user_id=?", (user_id,)).fetchone()
         #row = cursor.fetchone()
+        row=self.session.query(Users).filter(Users.user_id==user_id).first()
         if row is None:
             return error.error_authorization_fail()
-
-        if password != row[0]:
+        #if password !=row[0]
+        if password != row.password:
             return error.error_authorization_fail()
 
         return 200, "ok"
@@ -120,10 +138,14 @@ class User(db_conn.DBConn):
                 return code, message, ""
 
             token = jwt_encode(user_id, terminal)
-            cursor = self.session.execute(
-                 "UPDATE usr set token= '%s' , terminal = '%s' where user_id = '%s'"% (token, terminal, user_id) ) 
-            if cursor.rowcount == 0:
+            # cursor = self.session.execute(
+            #      "UPDATE usr set token= '%s' , terminal = '%s' where user_id = '%s'"% (token, terminal, user_id) )
+            cursor=self.session.query(Users).filter(Users.user_id == user_id).first() 
+            #if cursor.rowcount == 0:
+            if cursor is None:
                 return error.error_authorization_fail() + ("", )
+            cursor.token = token
+            cursor.terminal = terminal
             self.session.commit()
         except sqlite.Error as e:
             return 528, "{}".format(str(e)), ""
@@ -143,11 +165,14 @@ class User(db_conn.DBConn):
             # cursor = self.conn.execute(
             #     "UPDATE user SET token = ?, terminal = ? WHERE user_id=?",
             #     (dummy_token, terminal, user_id), )
-            cursor = self.session.execute(
-                 "UPDATE usr set token= '%s' , terminal = '%s' where user_id = '%s'"% (new_token, terminal, user_id) ) 
-            if cursor.rowcount == 0:
+            # cursor = self.session.execute(
+            #      "UPDATE usr set token= '%s' , terminal = '%s' where user_id = '%s'"% (new_token, terminal, user_id) ) 
+            cursor=self.session.query(Users).filter(Users.user_id == user_id).first()
+            # if cursor.rowcount == 0:
+            if cursor is None:
                 return error.error_authorization_fail()
-
+            cursor.token = new_token
+            cursor.terminal = terminal
             self.session.commit()
         except sqlite.Error as e:
             return 528, "{}".format(str(e))
@@ -168,11 +193,15 @@ class User(db_conn.DBConn):
             # cursor = self.conn.execute(
             #     "UPDATE user set password = ?, token= ? , terminal = ? where user_id = ?",
             #     (new_password, token, terminal, user_id), )
-            cursor=self.session.execute(
-            "UPDATE usr set password = '%s',token='%s',terminal='%s' where user_id = '%s'"%(new_password, token, terminal,user_id), )
-            if cursor.rowcount == 0:
+            # cursor=self.session.execute(
+            # "UPDATE usr set password = '%s',token='%s',terminal='%s' where user_id = '%s'"%(new_password, token, terminal,user_id), )
+            cursor= self.session.query(Users).filter(Users.user_id == user_id).first()
+            # if cursor.rowcount == 0:
+            if cursor is None:
                 return error.error_authorization_fail()
-
+            cursor.password = new_password
+            cursor.token = token
+            cursor.terminal = terminal
             self.session.commit()
         except sqlite.Error as e:
             return 528, "{}".format(str(e))
