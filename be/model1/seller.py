@@ -22,10 +22,10 @@ class Seller(db_conn.DBConn):
             
             if self.book_id_exist(store_id, book_id):
                 return error.error_exist_book_id(book_id)
-            print("*******")
+            # print("*******")
             book = json.loads(book_json_str)
-            print(book)
-            print("******",type(book))
+            # print(book)
+            # print("******",type(book))
             #这里的tag是list型的 数据库定义的是text型 但是可以正常插入 如果查找书籍时出现问题 在此修改
             # thelist = []  # 由于没有列表类型，故使用将列表转为text的办法
             # for tag in book.get('tags'):
@@ -35,14 +35,14 @@ class Seller(db_conn.DBConn):
             # book['tags'] = str(thelist)  # 解析成list请使用eval(
             #如果图书要插入图片 后期在此处更改
             #插入bookinfo
-            print('tags',book['tags'])
-            print("type of tag:",type(book['tags']))
-            print("type of binding:",type(book['binding']))
+            # print('tags',book['tags'])
+            # print("type of tag:",type(book['tags']))
+            # print("type of binding:",type(book['binding']))
             #print("type of currency unit:",type(book['currency_unit']))
             ############
             #由于助教给的body里没有currency_unit所以这里没有加入该值
             #如需后期加入 在insert 中更改即可
-            print("bookprice",book['price'])
+            # print("bookprice",book['price'])
             ##重要！！！！！
             #判断书是否已经加在书里
             row = self.session.execute("SELECT book_id FROM book WHERE book_id = '%s';" % (book_id,)).fetchone()
