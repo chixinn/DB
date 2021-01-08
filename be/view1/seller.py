@@ -40,3 +40,14 @@ def add_stock_level():
     code, message = s.add_stock_level(user_id, store_id, book_id, add_num)
 
     return jsonify({"message": message}), code
+
+#卖家发货
+@bp_seller.route("/deliver_book",methods=["POST"])
+def deliver_book():
+    user_id: str = request.json.get("user_id") #判断该订单是不是该店家的
+    order_id: str = request.json.get("order_id")
+    print(user_id,order_id)
+    s=seller.Seller()
+    code, message = s.deliver_book(user_id,order_id)
+
+    return jsonify({"message":message}),code

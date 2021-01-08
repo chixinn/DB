@@ -142,3 +142,41 @@ Status Code:
 200 | 充值成功
 401 | 授权失败
 5XX | 无效参数
+
+# 买家发货
+
+#### URL
+
+POST http://[address]/buyer/receive_book
+
+#### Request
+
+Headers:
+
+| key   | 类型   | 描述               | 是否可为空 |
+| ----- | ------ | ------------------ | ---------- |
+| token | string | 登录产生的会话标识 | N          |
+
+Body:
+
+```json
+{
+  "user_id": "$buyer id$",
+  "order_id": "$order id$"
+}
+```
+
+| key      | 类型   | 描述       | 是否可为空 |
+| -------- | ------ | ---------- | ---------- |
+| user_id  | string | 买家用户ID | N          |
+| order_id | string | 订单ID     | N          |
+
+#### Response
+
+Status Code:
+
+| 码   | 描述     |
+| ---- | :------- |
+| 200  | 发货成功 |
+| 401  | 授权失败 |
+| 5XX  | 无效参数 |

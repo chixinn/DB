@@ -10,7 +10,7 @@ from datetime import datetime
 import time
 from init_db.init_database import Store,Users,User_store
 from init_db.init_database import New_order_detail,New_order_undelivered
-from init_db.init_database import New_order_unpaid
+from init_db.init_database import New_order_unpaid,New_order_unreceived
 class Buyer(db_conn.DBConn):
     def __init__(self):
         db_conn.DBConn.__init__(self)
@@ -250,6 +250,40 @@ class Buyer(db_conn.DBConn):
             return 530, "{}".format(str(e))
 
         return 200, "ok"
+
+
+    def receive_book(self,user_id:str,order_id:str):
+        try:
+            #判断该用户是否存在
+            if not self.user_id_exist(user_id):
+                return error.error_non_exist_user_id(user_id) + (order_id, )
+            print("用户存在")
+            #判断该订单是否存在在未收货里面
+            row=self.session.query(New_order_unreceived).filter_by(order_id=order_id)
+            order=row.first()
+            print("未收货订单",order)
+            if order is None:
+                return error.error_invalid_order_id(order_id)
+
+            buyer_id=order.buyer_id
+            #判断该用户是否有这个订单。。。。验证收货的人是否正确
+            if user_id != buyer_id:
+                return error.error_authorization_fail()
+
+            #有该订单，收货
+            #添加收货时间
+            timenow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print("******已收货")
+            row.update({New_order_unreceived.receive_time:timenow})
+            self.session.commit()
+
+        except sqlite.Error as e:
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            return 530, "{}".format(str(e))
+        return 200, "ok"
+
+
     # 买家查询 
     # 比较索引 和模糊查询的 检索效率
     # 最后这两个接口是要删一个的

@@ -3,7 +3,7 @@ sys.path.append("../")
 from be.model1 import store
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, ForeignKey, create_engine, PrimaryKeyConstraint
+from sqlalchemy import Column, String, Integer, ForeignKey, create_engine, PrimaryKeyConstraint,and_
 from sqlalchemy.orm import sessionmaker
 from init_db.init_database import Users
 from init_db.init_database import User_store
