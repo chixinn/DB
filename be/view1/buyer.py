@@ -72,5 +72,18 @@ def search_functions():
     b = Buyer()
     code, message = b.search_functions(store_id,search_type,search_input,field)
     return jsonify({"message": message,"code":code}),code 
+@bp_buyer.route("/search_history_status", methods=["POST"])
+def search_history_status():
+    user_id: str = request.json.get("buyer_id")
 
+    b = Buyer()
+    code, message,ret = b.search_history_status(user_id)
+    return jsonify({"message": message,"history record": ret}), code
+@bp_buyer.route("/cancel", methods=["POST"])
+def cancel():
+    user_id: str = request.json.get("buyer_id")
+    order_id: str = request.json.get("order_id")
+    b = Buyer()
+    code, message = b.cancel(user_id,order_id)
+    return jsonify({"message": message}), code
 
