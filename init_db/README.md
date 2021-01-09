@@ -58,3 +58,17 @@ class BookWhole(Base):
 - 完成了出版ER图设计，由ER图可以导出8个表格，都已有构建和初始化代码。
 
 - ER图位置： init_db/ER图.png
+
+# 2021.1.9 更新  Search搜索库建立更新 (cxn)
+最终数据库执行顺序:
+1. init_database.py
+2. book.py(可以及时在里面调一些参数)
+3. search.py
+4. Navicat可视化查看
+5. 配置好zh-parser以后，比较方便得到反馈的是在Navicat里直接按条复制执行`search-index.sql`中得到，最好是一条条复制方便及时显示报错。
+
+> search_index.txt/test_search_again.sql是我备份用的，你们可以直接忽略
+> 我自己测试4w条书的book_intro分词后的库初始化![大致时间](https://tva1.sinaimg.cn/large/008eGmZEgy1gmh79ud7tbj31h10mpgth.jpg)
+> 我自己测试4w条书的其它分词初始化大致时间总体还是在可接受的范围内。
+![其它三项初始化时间](https://tva1.sinaimg.cn/large/008eGmZEly1gmh7cm39inj31wy08ajws.jpg)
+

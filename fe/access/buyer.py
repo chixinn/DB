@@ -68,3 +68,13 @@ class Buyer:
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, json=json)
         return r.status_code 
+    def search_function_limit(self,store_id:str,search_type:str,search_input:str,field:str)->(int, [dict]):
+        json = {"store_id": store_id, 
+        "search_type": search_type,
+        "search_input":search_input,
+        "field":field}
+        url=urljoin(self.url_prefix,"search_function_limit")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, json=json)
+        response_json = r.json()
+        return r.status_code,response_json.get("[res]")#test

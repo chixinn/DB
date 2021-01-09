@@ -72,6 +72,16 @@ def search_functions():
     b = Buyer()
     code, message = b.search_functions(store_id,search_type,search_input,field)
     return jsonify({"message": message,"code":code}),code 
+    
+@bp_buyer.route("/search_functions_limit", methods=["POST"])
+def search_functions_limit():
+    store_id=request.json.get("store_id")
+    search_type=request.json.get("search_type")
+    search_input=request.json.get("search_input")
+    field=request.json.get("field")
+    b = Buyer()
+    code, message = b.search_functions_limit(store_id,search_type,search_input,field)
+    return jsonify({"message": message,"code":code}),code 
 @bp_buyer.route("/search_history_status", methods=["POST"])
 def search_history_status():
     user_id: str = request.json.get("buyer_id")
