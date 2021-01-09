@@ -99,6 +99,9 @@ class New_order_detail(Base):
     __tablename__ = 'new_order_detail'
     order_id = Column(String(512), nullable=False)
     book_id = Column(Integer, nullable=False)
+    
+    buyer_id=Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    store_id=Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
     count = Column(Integer, nullable=False)
     price = Column(Integer, nullable=False)
     __table_args__ = (
@@ -196,6 +199,8 @@ def init_testorder():
     # 已下单未付款详细信息
     Order_detailA = New_order_detail(order_id = 'order1',
                                     book_id = 1,
+                                    buyer_id = 'lalala@ecnu.com',
+                                    store_id = 'Lemon',
                                     count = 2,
                                     price = 2000)
     # 已付款未发货
@@ -205,7 +210,10 @@ def init_testorder():
                             price = 10000,
                             purchase_time = datetime.now())
     Order_detailB = New_order_detail(order_id = 'order2',
+   
                                     book_id = 2,
+                                    buyer_id = 'hahaa@ecnu.com',
+                                    store_id = 'NaiXue',
                                     count = 1,
                                     price = 10000)
     # 已发货未收货
@@ -218,6 +226,8 @@ def init_testorder():
                             )
     Order_detailC = New_order_detail(order_id = 'order3',
                                     book_id = 2,
+                                    buyer_id = 'hahaa@ecnu.com',
+                                    store_id = 'NaiXue',
                                     count = 1,
                                     price = 10000)
     session.add_all([Order_detailC,Order_detailA,Order_detailB,OrderA,OrderB,OrderC])
@@ -251,7 +261,7 @@ def init():
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     #先drop再create
-    Base.metadata.drop_all(engine)
+    #Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     # 提交即保存到数据库
     session.commit()

@@ -73,7 +73,8 @@ class BookDB:
         if large:
             self.book_db = self.db_l
         else:
-            self.book_db = "D:/这学期/数据管理系统/大作业/项目/DB/fe/data/book.db"
+            #self.book_db = "D:/这学期/数据管理系统/大作业/项目/DB/fe/data/book.db"
+            self.book_db=self.db_s
 
     def get_book_count(self):
         conn = sqlite.connect(self.book_db)
@@ -195,7 +196,7 @@ if __name__ == '__main__':
     bookdb=BookDB(large=False)
     # print(bookdb.get_book_count())
     # bookdb.get_book_info(1,10)#这里更改数目
-    Base.metadata.drop_all(engine)#drop掉旧的
+    #Base.metadata.drop_all(engine)#drop掉旧的
     Base.metadata.create_all(engine)
     bookdb.init_postgresql(5,10)#这更改初始化的图书数目
 

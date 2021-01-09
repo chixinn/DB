@@ -79,7 +79,7 @@ class Buyer(db_conn.DBConn):
                 # self.session.execute(
                 #     "INSERT INTO new_order_detail(order_id, book_id, count, price) VALUES('%s',%d, %d, %d);" % (
                 #         uid, book_id, count, price))
-                new_order_info = New_order_detail(order_id=uid, book_id=book_id, count=count, price=price)
+                new_order_info = New_order_detail(order_id=uid, book_id=book_id,buyer_id=user_id ,store_id=store_id, count=count, price=price)
                 self.session.add(new_order_info)
             # self.conn.execute(
             #     "INSERT INTO new_order(order_id, store_id, user_id) "
@@ -445,4 +445,245 @@ class Buyer(db_conn.DBConn):
                 restmp['error_code[599]']="书库和本店一本也没有！"
                 res.append(restmp)
                 return 599,res
+    def search_history_status(self,buyer_id:str,flag:int):
+        try:
+            if not self.user_id_exist(buyer_id):
+                #print('********')
+                code, mes = error.error_non_exist_user_id(buyer_id)
+                return code, mes, " "
+        #查所有订单
+            if flag==0:
+                record_listn=self.session.query(New_order_detail).filter(New_order_detail.buyer_id==buyer_id)
+                print(record_listn)
+                records=[]
+                for record in record_listn:
+                
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "book_id": record.book_id,
+                    "count":record.count,
+                    "price":record.price
+                    })
+                self.session.close()  
+        #未付款
+        
+            if flag==1:
+                record_list1=self.session.query(New_order_unpaid).filter(New_order_unpaid.buyer_id==buyer_id,New_order_unpaid.commit_time!=None)
+                print(record_list1)
+                records=[]
+                for record in record_list1:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "commit_time":record.commit_time,
+                    "status":'未付款',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                    ]
+                    })
+                self.session.close()                
+        #已付款待发货
+            if flag==2:
+                record_list=self.session.query(New_order_undelivered).filter(New_order_undelivered.buyer_id==buyer_id,New_order_undelivered.purchase_time!=None)
+                print(record_list)
+                records=[]
+                for record in record_list:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "purchase_time":record.purchase_time,
+                    "status":'已付款待发货',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                    ]
+                    })
+                self.session.close()
+        #已发货待收货
+            if flag==3:
+                record_list2=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.purchase_time!=None)
+                print(record_list2)
+                records=[]
+                for record in record_list2:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "purchase_time":record.purchase_time,
+                    "status":'已发货待收货',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                    ]
+                    })
+                self.session.close()
+        #已收货
+            if flag==4:
+                record_list3=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.receive_time!=None)
+                print(record_list3)
+                records=[]
+                for record in record_list3:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "receive_time":record.receive_time,
+                    "status":'已收货',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                        ]
+                    })
+                self.session.close()
+
+        except BaseException as e:
+            return 530, "{}".format(str(e)), []
+        return 200, "ok", records
+
+    def cancel(self,buyer_id:str, order_id:str):
+        if not self.user_id_exist(buyer_id):
+            code, mes = error.error_non_exist_user_id(buyer_id)
+            return code, mes
+        #是否属于未付款订单
+        store=self.session.query(New_order_unpaid).filter(New_order_unpaid.buyer_id==buyer_id,New_order_unpaid.commit_time!=None).first()
+        
+        if store is not None:
+            store_id=store.store_id
+            price=store.price
+            
+            query = self.session.query(New_order_unpaid).filter(New_order_unpaid.order_id == order_id)
+            query.delete()
+        else:
+            # 是否属于已付款且未发货订单
+            order_info=self.session.query(New_order_undelivered).filter(New_order_undelivered.buyer_id==buyer_id,New_order_undelivered.order_id==order_id,New_order_undelivered.purchase_time!=None).first()
+           
+            if order_info is not None:
+                store_id=order_info.store_id
+                price=order_info.price
+                
+                #删除订单
+                query = self.session.query(New_order_undelivered).filter(New_order_undelivered.order_id == order_id,New_order_undelivered.purchase_time!=None)
+                query.delete()
+                
+                # 卖家减钱
+                #查询卖家
+                user_id=self.session.query(User_store).filter(User_store.store_id==store_id).first()
+                
+                cursor = self.session.query(Users).filter_by(user_id=user_id.user_id)
+                rowcount = cursor.update({Users.balance: Users.balance-price})
+               
+                #买家加钱
+                cursor = self.session.query(Users).filter_by(user_id=buyer_id)
+                rowcount = cursor.update({Users.balance: Users.balance+price})
+                
+            else:
+                #已发货 无法取消 需要申请售后
+                #无法取消
+                return error.error_invalid_order_id(order_id)
+       
+        #加库存
+        store=self.session.query(Store).filter_by(store_id=store_id)
+        stores=store.first()
+        cursor = self.session.query(New_order_detail).filter(New_order_detail.order_id==order_id,New_order_detail.book_id==stores.book_id).first()
+        
+        count=cursor.count
+        # cursor = self.session.query(Store).filter(Store.book_id==book_id, Store.store_id==store_id, Store.stock_level >= count)
+        # rowcount = cursor.update({Store.stock_level: Store.stock_level - count})
+        store.update({Store.stock_level: Store.stock_level + count})
+        # rowcount = self.session.query(Store).update({Store.stock_level: Store.stock_level+count})
+        
+        self.session.commit()
+        self.session.close()
+        return 200, 'ok'
     
+    # EXPLAIN ANALYZE SELECT DISTINCT book_id FROM search_book_intro  WHERE tsv_column @@ '美丽' LIMIT 100
+    def search_functions_limit(self,store_id:str,search_type:str,search_input:str,field:str)->(int, [dict]):
+        time1=time.time()
+        res=[]
+        resglobal=[]
+        # 下面这种模糊查询的方式是不好用的
+        # EXPLAIN ANALYZE SELECT DISTINCT book_id FROM search_book_intro  WHERE tsv_column @@ '美丽' LIMIT 100
+
+        rows=self.session.execute("SELECT DISTINCT book_id FROM %s WHERE tsv_column @@ '%s' LIMIT 100"%(field,search_input)).fetchall()
+        # print("SELECT book_id FROM %s WHERE tsv_column @@ '%s'"%(field,search_input))
+        # rows=self.session.execute("SELECT book_id from search_author where author like '%s' order by search_id" % ('%'+search_input+'%')).fetchall()
+        if len(rows)!=0:
+            for row in rows:
+                restmp={}
+                book_global_id=row[0]#?
+                ans=self.session.execute("SELECT author,title,book_intro,original_price,tags from book where book_id ='%s' " % (book_global_id)).fetchone()
+                restmp['book_id']=book_global_id
+                restmp['author']=ans[0]
+                restmp['title']=ans[1]
+                restmp['book_intro']=ans[2]
+                restmp['price']=ans[3]
+                restmp['tags']=ans[4]
+                resglobal.append(restmp) 
+        else:
+            restmp={}
+            restmp['error_code[597]']="书库里找不到这个结果"
+            res.append(restmp)
+            return 599,res
+        if search_type=='global':
+            #需要加图再加图
+            time2=time.time()
+            timetmp={}
+            timetmp['time complexity res']=time2-time1
+            resglobal.insert(0,timetmp)   
+            return 200,resglobal
+        elif search_type=='instore': # 待DEBUG(应该是好的)
+            # 首先获取该店的图书信息
+            # 先要加store id不对的边缘检测?
+            rows_likely_in_store=self.session.execute(
+                "SELECT DISTINCT book_id,title,author,book_intro,tags from book where book.book_id in (SELECT DISTINCT book_id FROM %s WHERE tsv_column @@ '%s' LIMIT 100);"% (field,search_input)
+                ).fetchall()
+            # print(  "SELECT DISTINCT book_id,title,author,book_intro from book where book.book_id in (SELECT DISTINCT book_id FROM search_author WHERE tsv_column @@ '%s');"% (search_input))
+            if len(rows_likely_in_store)!=0:
+                for row in rows_likely_in_store:
+                    book_instore_id=row[0]#先获取book_id，毕竟一个书店有的书和全局有的书数据量相比还是小的
+                    restmp={}
+                    ans=self.session.execute("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id)).fetchone()
+                    if ans ==None:
+                        # 测试用
+                        # restmp={}
+                        # restmp['error_code[599]']="这本没有哦!"
+                        # res.append(restmp)
+                        continue
+                    else:
+                        print("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id))
+                        stock=ans[0]
+                        current_price=[1]
+                        restmp['book_id']=row[0]
+                        restmp['author']=row[2]
+                        restmp['title']=row[1]
+                        restmp['book_intro']=row[3]
+                        restmp['book_tags']=row[3]
+                        restmp['current_price']=current_price
+                        restmp['stock_level']=stock
+                        restmp['store_id']=store_id
+                        res.append(restmp)
+                #根据book_id和字典确定author的搜索结果。
+                time2=time.time()
+                timetmp={}
+                timetmp['time complexity res']=time2-time1
+                res.insert(0,timetmp)
+                if(len(res)==1):
+                    restmp={}
+                    restmp['error_code[598]']="本店一本也没有！"
+                    res.append(restmp)
+                    return 599,res
+                return 200,res
+            else:
+                restmp={}
+                restmp['error_code[599]']="书库和本店一本也没有！"
+                res.append(restmp)
+                return 599,res
