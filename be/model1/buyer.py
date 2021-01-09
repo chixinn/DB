@@ -445,4 +445,140 @@ class Buyer(db_conn.DBConn):
                 restmp['error_code[599]']="书库和本店一本也没有！"
                 res.append(restmp)
                 return 599,res
-    
+    def search_history_status(self,buyer_id:str):
+        try:
+            if not self.user_id_exist(buyer_id):
+                #print('********')
+                code, mes = error.error_non_exist_user_id(buyer_id)
+                return code, mes, " "
+        #未付款
+            record_list1=self.session.query(New_order_unpaid).filter(New_order_unpaid.buyer_id==buyer_id,New_order_unpaid.commit_time!=None)
+            print(record_list1)
+            records=[]
+            for record in record_list1:
+                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "commit_time":record.commit_time,
+                    "status":'未付款',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                    ]
+                })
+            self.session.close()
+        #已付款待发货
+            record_list=self.session.query(New_order_undelivered).filter(New_order_undelivered.buyer_id==buyer_id,New_order_undelivered.purchase_time!=None)
+            print(record_list)
+            records=[]
+            for record in record_list:
+                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "purchase_time":record.purchase_time,
+                    "status":'已付款待发货',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                    ]
+                })
+            self.session.close()
+        #已发货待收货
+            record_list2=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.purchase_time!=None)
+            print(record_list2)
+            records=[]
+            for record in record_list2:
+                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "purchase_time":record.purchase_time,
+                    "status":'已发货待收货',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                    ]
+                })
+            self.session.close()
+        #已收货
+            record_list3=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.receive_time!=None)
+            print(record_list3)
+            records=[]
+            for record in record_list3:
+                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "receive_time":record.receive_time,
+                    "status":'已收货',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                    ]
+                })
+            self.session.close()
+
+        except BaseException as e:
+            return 530, "{}".format(str(e)), []
+        return 200, "ok", records
+    def cancel(self,buyer_id:str, order_id:str):
+        if not self.user_id_exist(buyer_id):
+            code, mes = error.error_non_exist_user_id(buyer_id)
+            return code, mes
+        #是否属于未付款订单
+        store=self.session.query(New_order_unpaid).filter(New_order_unpaid.buyer_id==buyer_id,New_order_unpaid.commit_time!=None).first()
+        
+        if store is not None:
+            store_id=store.store_id
+            price=store.price
+            
+            query = self.session.query(New_order_unpaid).filter(New_order_unpaid.order_id == order_id)
+            query.delete()
+        else:
+            # 是否属于已付款且未发货订单
+            order_info=self.session.query(New_order_undelivered).filter(New_order_undelivered.buyer_id==buyer_id,New_order_undelivered.order_id==order_id,New_order_undelivered.purchase_time!=None).first()
+           
+            if order_info is not None:
+                store_id=order_info.store_id
+                price=order_info.price
+                
+                #删除订单
+                query = self.session.query(New_order_undelivered).filter(New_order_undelivered.order_id == order_id,New_order_undelivered.purchase_time!=None)
+                query.delete()
+                
+                # 卖家减钱
+                #查询卖家
+                user_id=self.session.query(User_store).filter(User_store.store_id==store_id).first()
+                
+                cursor = self.session.query(Users).filter_by(user_id=user_id.user_id)
+                rowcount = cursor.update({Users.balance: Users.balance-price})
+               
+                #买家加钱
+                cursor = self.session.query(Users).filter_by(user_id=buyer_id)
+                rowcount = cursor.update({Users.balance: Users.balance+price})
+                
+            else:
+                #已发货 无法取消 需要申请售后
+                #无法取消
+                return error.error_invalid_order_id(order_id)
+       
+        #加库存
+        store=self.session.query(Store).filter_by(store_id=store_id)
+        stores=store.first()
+        cursor = self.session.query(New_order_detail).filter(New_order_detail.order_id==order_id,New_order_detail.book_id==stores.book_id).first()
+        
+        count=cursor.count
+        # cursor = self.session.query(Store).filter(Store.book_id==book_id, Store.store_id==store_id, Store.stock_level >= count)
+        # rowcount = cursor.update({Store.stock_level: Store.stock_level - count})
+        store.update({Store.stock_level: Store.stock_level + count})
+        # rowcount = self.session.query(Store).update({Store.stock_level: Store.stock_level+count})
+        
+        self.session.commit()
+        self.session.close()
+        return 200, 'ok'

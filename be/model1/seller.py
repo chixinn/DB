@@ -14,7 +14,7 @@ class Seller(db_conn.DBConn):
     def __init__(self):
         db_conn.DBConn.__init__(self)
 
-    def add_book(self, user_id: str, store_id: str, book_id: str, book_json_str: str, stock_level: int):
+    def add_book(self, user_id: str, store_id: str, book_id: str,price:int, book_json_str: str, stock_level: int):
         try:
             
             if not self.user_id_exist(user_id):
@@ -101,7 +101,8 @@ class Seller(db_conn.DBConn):
             store.store_id=store_id
             store.stock_level=stock_level
             ###这里需改动 函数接口中增加price 这里为用户输入的价格 不是书的零售价 目前不影响测试
-            store.price=book['price']
+            #store.price=book['price']
+            store.price=price
             self.session.add(store)
             #self.session.execute("INSERT into store(store_id, book_id,  stock_level,price) VALUES ('%s', %d,  %d,%d)"%(store_id, int(book_id),  stock_level,book['price']))
             self.session.commit()
