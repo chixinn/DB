@@ -94,8 +94,9 @@ class Seller(db_conn.DBConn):
                 books.content= book['content']
                 books.tags=book['tags']
                 
-                self.session.add(book)
+                self.session.add(books)
                 print("book info success")
+                self.session.commit()
             store=Store()
             store.book_id=int(book_id)
             store.store_id=store_id

@@ -75,9 +75,10 @@ def search_functions():
 @bp_buyer.route("/search_history_status", methods=["POST"])
 def search_history_status():
     user_id: str = request.json.get("buyer_id")
-
+    flag:int=request.json.get("flag")
     b = Buyer()
-    code, message,ret = b.search_history_status(user_id)
+    
+    code, message,ret = b.search_history_status(user_id,flag)
     return jsonify({"message": message,"history record": ret}), code
 @bp_buyer.route("/cancel", methods=["POST"])
 def cancel():

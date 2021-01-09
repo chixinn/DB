@@ -50,9 +50,10 @@ class Buyer:
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
-    def search_history_status(self,buyer_id: str):
+    def search_history_status(self,buyer_id: str,flag:int):
         json = {
-            "buyer_id": buyer_id
+            "buyer_id": buyer_id,
+            "flag":flag
         }
         url = urljoin(self.url_prefix, "search_history_status")
         headers = {"token": self.token}
