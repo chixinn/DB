@@ -79,7 +79,7 @@ class Buyer(db_conn.DBConn):
                 # self.session.execute(
                 #     "INSERT INTO new_order_detail(order_id, book_id, count, price) VALUES('%s',%d, %d, %d);" % (
                 #         uid, book_id, count, price))
-                new_order_info = New_order_detail(order_id=uid, book_id=book_id, count=count, price=price)
+                new_order_info = New_order_detail(order_id=uid, book_id=book_id,buyer_id=user_id ,store_id=store_id, count=count, price=price)
                 self.session.add(new_order_info)
             # self.conn.execute(
             #     "INSERT INTO new_order(order_id, store_id, user_id) "
@@ -445,19 +445,37 @@ class Buyer(db_conn.DBConn):
                 restmp['error_code[599]']="书库和本店一本也没有！"
                 res.append(restmp)
                 return 599,res
-    def search_history_status(self,buyer_id:str):
+    def search_history_status(self,buyer_id:str,flag:int):
         try:
             if not self.user_id_exist(buyer_id):
                 #print('********')
                 code, mes = error.error_non_exist_user_id(buyer_id)
                 return code, mes, " "
+        #查所有订单
+            if flag==0:
+                record_listn=self.session.query(New_order_detail).filter(New_order_detail.buyer_id==buyer_id)
+                print(record_listn)
+                records=[]
+                for record in record_listn:
+                
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "book_id": record.book_id,
+                    "count":record.count,
+                    "price":record.price
+                    })
+                self.session.close()  
         #未付款
-            record_list1=self.session.query(New_order_unpaid).filter(New_order_unpaid.buyer_id==buyer_id,New_order_unpaid.commit_time!=None)
-            print(record_list1)
-            records=[]
-            for record in record_list1:
-                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
-                records.append({
+        
+            if flag==1:
+                record_list1=self.session.query(New_order_unpaid).filter(New_order_unpaid.buyer_id==buyer_id,New_order_unpaid.commit_time!=None)
+                print(record_list1)
+                records=[]
+                for record in record_list1:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
                     "order_id":record.order_id,
                     "buyer_id": record.buyer_id,
                     "store_id": record.store_id,
@@ -467,15 +485,16 @@ class Buyer(db_conn.DBConn):
                         {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
                         for rei in record_infos
                     ]
-                })
-            self.session.close()
+                    })
+                self.session.close()                
         #已付款待发货
-            record_list=self.session.query(New_order_undelivered).filter(New_order_undelivered.buyer_id==buyer_id,New_order_undelivered.purchase_time!=None)
-            print(record_list)
-            records=[]
-            for record in record_list:
-                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
-                records.append({
+            if flag==2:
+                record_list=self.session.query(New_order_undelivered).filter(New_order_undelivered.buyer_id==buyer_id,New_order_undelivered.purchase_time!=None)
+                print(record_list)
+                records=[]
+                for record in record_list:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
                     "order_id":record.order_id,
                     "buyer_id": record.buyer_id,
                     "store_id": record.store_id,
@@ -485,15 +504,16 @@ class Buyer(db_conn.DBConn):
                         {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
                         for rei in record_infos
                     ]
-                })
-            self.session.close()
+                    })
+                self.session.close()
         #已发货待收货
-            record_list2=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.purchase_time!=None)
-            print(record_list2)
-            records=[]
-            for record in record_list2:
-                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
-                records.append({
+            if flag==3:
+                record_list2=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.purchase_time!=None)
+                print(record_list2)
+                records=[]
+                for record in record_list2:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
                     "order_id":record.order_id,
                     "buyer_id": record.buyer_id,
                     "store_id": record.store_id,
@@ -503,15 +523,16 @@ class Buyer(db_conn.DBConn):
                         {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
                         for rei in record_infos
                     ]
-                })
-            self.session.close()
+                    })
+                self.session.close()
         #已收货
-            record_list3=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.receive_time!=None)
-            print(record_list3)
-            records=[]
-            for record in record_list3:
-                record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
-                records.append({
+            if flag==4:
+                record_list3=self.session.query(New_order_unreceived).filter(New_order_unreceived.buyer_id==buyer_id,New_order_unreceived.receive_time!=None)
+                print(record_list3)
+                records=[]
+                for record in record_list3:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
                     "order_id":record.order_id,
                     "buyer_id": record.buyer_id,
                     "store_id": record.store_id,
@@ -520,13 +541,14 @@ class Buyer(db_conn.DBConn):
                     "book_list": [
                         {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
                         for rei in record_infos
-                    ]
-                })
-            self.session.close()
+                        ]
+                    })
+                self.session.close()
 
         except BaseException as e:
             return 530, "{}".format(str(e)), []
         return 200, "ok", records
+
     def cancel(self,buyer_id:str, order_id:str):
         if not self.user_id_exist(buyer_id):
             code, mes = error.error_non_exist_user_id(buyer_id)

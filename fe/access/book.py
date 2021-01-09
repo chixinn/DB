@@ -36,8 +36,8 @@ class BookDB:
         if large:
             self.book_db = self.db_l
         else:
-            #self.book_db = "/Users/wangwenqing/Desktop/数据管理系统/DB/fe/data/book.db"
-            self.book_db = self.db_s
+            self.book_db = "/Users/wangwenqing/Desktop/数据管理系统/DB/fe/data/book.db"
+            #self.book_db = self.db_s
     def get_book_count(self):
         conn = sqlite.connect(self.book_db)
         cursor = conn.execute(
