@@ -92,6 +92,15 @@ class New_order_unreceived(Base):
     price = Column(Integer, nullable=False)
     purchase_time = Column(DateTime, nullable=False)
     receive_time = Column(DateTime, nullable=True) # yzySchema也是加了status
+# 已取消订单
+class New_order_canceled(Base):
+    __tablename__ = 'new_order_canceled'
+    order_id = Column(String(512), primary_key=True)
+    buyer_id = Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    store_id = Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
+    price = Column(Integer, nullable=False)
+    cancel_time = Column(DateTime, nullable=False)
+   
 
 
 # 订单明细表
@@ -129,7 +138,7 @@ class BookWhole(Base):
     book_intro = Column(Text,nullable=True)
     content = Column(Text,nullable=True)
     tags = Column(Text,nullable=True)
-    picture=Column(LargeBinary)
+    #picture=Column(LargeBinary)
 
 
 

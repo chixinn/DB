@@ -92,6 +92,21 @@ class New_order_detail(Base):
 ```
 
 从而避免向非空属性插入空值的报错
+# 2021.1.9 更新 数据库优化(wwq)
+应用驱动优化
+添加new_order_cancel表
+```python
+class New_order_canceled(Base):
+    __tablename__ = 'new_order_canceled'
+    order_id = Column(String(512), primary_key=True)
+    buyer_id = Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    store_id = Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
+    price = Column(Integer, nullable=False)
+    cancel_time = Column(DateTime, nullable=False)
+```
+
+
+淘宝应用中new_order_detail包括用户的所有订单，也应包含new_order_cancel。new_order_cancel与new_order_undelivered等的并集为new_order。这样的添加使得订单的结构更加完善。对应需要修改手动删除 自动删除以及查询订单历史的函数
 
 # 2021.1.9 更新  Search搜索库建立更新 (cxn)
 最终数据库执行顺序:

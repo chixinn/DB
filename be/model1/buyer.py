@@ -10,7 +10,7 @@ from datetime import datetime
 import time
 from init_db.init_database import Store,Users,User_store
 from init_db.init_database import New_order_detail,New_order_undelivered
-from init_db.init_database import New_order_unpaid,New_order_unreceived
+from init_db.init_database import New_order_unpaid,New_order_unreceived,New_order_canceled
 class Buyer(db_conn.DBConn):
     def __init__(self):
         db_conn.DBConn.__init__(self)
@@ -386,6 +386,24 @@ class Buyer(db_conn.DBConn):
                         ]
                     })
                 self.session.close()
+            if flag==5:
+                record_list4=self.session.query(New_order_canceled).filter(New_order_canceled.buyer_id==buyer_id,New_order_canceled.cancel_time!=None)
+                print(record_list4)
+                records=[]
+                for record in record_list4:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "cancel_time":record.cancel_time,
+                    "status":'已取消',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                        ]
+                    })
+                self.session.close()
 
         except BaseException as e:
             return 530, "{}".format(str(e)), []
@@ -431,7 +449,11 @@ class Buyer(db_conn.DBConn):
                 #已发货 无法取消 需要申请售后
                 #无法取消
                 return error.error_invalid_order_id(order_id)
-       
+        #加入new_order_cancel中
+        timenow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cancel_order = New_order_canceled(order_id=order_id, buyer_id=buyer_id ,store_id=store_id,  price=price,cancel_time=timenow)
+        self.session.add(cancel_order)
+        self.session.commit()
         #加库存
         store=self.session.query(Store).filter_by(store_id=store_id)
         stores=store.first()
