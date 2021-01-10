@@ -92,6 +92,15 @@ class New_order_unreceived(Base):
     price = Column(Integer, nullable=False)
     purchase_time = Column(DateTime, nullable=False)
     receive_time = Column(DateTime, nullable=True) # yzySchema也是加了status
+# 已取消订单
+class New_order_canceled(Base):
+    __tablename__ = 'new_order_canceled'
+    order_id = Column(String(512), primary_key=True)
+    buyer_id = Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    store_id = Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
+    price = Column(Integer, nullable=False)
+    cancel_time = Column(DateTime, nullable=False)
+   
 
 
 # 订单明细表
@@ -129,8 +138,7 @@ class BookWhole(Base):
     book_intro = Column(Text,nullable=True)
     content = Column(Text,nullable=True)
     tags = Column(Text,nullable=True)
-
-
+    #picture=Column(LargeBinary)
 
 
 
@@ -244,6 +252,25 @@ def init_books():
     title ='Gone with the wind')
     ])
     session.commit()
+def init_search_test():
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    session.add_all([
+        Users(user_id = 'search',
+            password = '123456',
+            balance = 9000,
+            token = '***',
+            terminal='Edge'),
+        User_store(user_id = 'search',
+                store_id = 'Kadokawa'),
+                #store_id相当于商店名
+        Store(store_id = 'Kadokawa',
+                    book_id = 50,
+                    stock_level=10,
+                    price=2599)
+    ])
+    session.commit()
+   
 
 
 
@@ -273,4 +300,6 @@ if __name__ == "__main__":
     # 创建数据库
     init()
     # 加入信息
-    init_test_all()
+    # init_test_all()
+    # 这个想提高覆盖率时必须有!
+    init_search_test()

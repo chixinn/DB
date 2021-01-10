@@ -58,6 +58,8 @@ class Test_search_history_status:
         assert code == 200
         code = self.buyer.search_history_status(self.buyer_id,4)
         assert code == 200
+        code = self.buyer.search_history_status(self.buyer_id,5)
+        assert code == 200
 
     def test_false_buyer(self):
         code = self.buyer.search_history_status(self.buyer_id+'s',0)
@@ -70,6 +72,8 @@ class Test_search_history_status:
         assert code != 200
         code = self.buyer.search_history_status(self.buyer_id+'s',4)
         assert code != 200
+        code = self.buyer.search_history_status(self.buyer_id+'s',5)
+        assert code != 200
 
     def test_no_record_buyer(self):
         code = self.buyer.search_history_status(self.buyer_id,0)
@@ -81,4 +85,6 @@ class Test_search_history_status:
         code = self.buyer.search_history_status(self.buyer_id,3)
         assert code == 200
         code = self.buyer.search_history_status(self.buyer_id,4)
+        assert code == 200
+        code = self.buyer.search_history_status(self.buyer_id,5)
         assert code == 200

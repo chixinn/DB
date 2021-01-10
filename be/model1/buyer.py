@@ -10,7 +10,7 @@ from datetime import datetime
 import time
 from init_db.init_database import Store,Users,User_store
 from init_db.init_database import New_order_detail,New_order_undelivered
-from init_db.init_database import New_order_unpaid,New_order_unreceived
+from init_db.init_database import New_order_unpaid,New_order_unreceived,New_order_canceled
 class Buyer(db_conn.DBConn):
     def __init__(self):
         db_conn.DBConn.__init__(self)
@@ -286,165 +286,7 @@ class Buyer(db_conn.DBConn):
 
     # 买家查询 
     # 比较索引 和模糊查询的 检索效率
-    # 最后这两个接口是要删一个的
-    def search_book_author_like(self,store_id:str,search_type:str,search_input:str)->(int, [dict]):
-        time1=time.time()
-        res=[]
-        resglobal=[]
-        # 下面这种模糊查询的方式是不好用的
-        rows=self.session.execute("SELECT DISTINCT book_id FROM search_author WHERE tsv_column @@ '%s'"%(search_input)).fetchall()
-        print("SELECT book_id FROM search_author WHERE tsv_column @@ '%s'"%(search_input))
-        # rows=self.session.execute("SELECT book_id from search_author where author like '%s' order by search_id" % ('%'+search_input+'%')).fetchall()
-        if len(rows)!=0:
-            for row in rows:
-                restmp={}
-                book_global_id=row[0]#?
-                ans=self.session.execute("SELECT author,title,book_intro,original_price from book where book_id ='%s' " % (book_global_id)).fetchone()
-                restmp['book_id']=book_global_id
-                restmp['author']=ans[0]
-                restmp['title']=ans[1]
-                restmp['book_intro']=ans[2]
-                restmp['price']=ans[3]
-                resglobal.append(restmp) 
-        else:
-            restmp={}
-            restmp['error_code[597]']="书库里找不到这个结果"
-            res.append(restmp)
-            return 597,res
-        if search_type=='global':
-            #需要加图再加图
-            time2=time.time()
-            timetmp={}
-            timetmp['time complexity res']=time2-time1
-            resglobal.insert(0,timetmp)   
-            return 200,resglobal
-        elif search_type=='instore': # 待DEBUG
-            # 首先获取该店的图书信息
-            # 先要加store id不对的边缘检测?
-            rows_likely_in_store=self.session.execute(
-                "SELECT DISTINCT book_id,title,author,book_intro from book where book.book_id in (SELECT DISTINCT book_id FROM search_author WHERE tsv_column @@ '%s');"% (search_input)
-                ).fetchall()
-            print(  "SELECT DISTINCT book_id,title,author,book_intro from book where book.book_id in (SELECT DISTINCT book_id FROM search_author WHERE tsv_column @@ '%s');"% (search_input))
-            if len(rows_likely_in_store)!=0:
-                for row in rows_likely_in_store:
-                    book_instore_id=row[0]#先获取book_id，毕竟一个书店有的书和全局有的书数据量相比还是小的
-                    restmp={}
-                    ans=self.session.execute("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id)).fetchone()
-                    if ans ==None:
-                        # 测试用
-                        # restmp={}
-                        # restmp['error_code[599]']="这本没有哦!"
-                        # res.append(restmp)
-                        continue
-                    else:
-                        print("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id))
-                        stock=ans[0]
-                        current_price=[1]
-                        restmp['book_id']=row[0]
-                        restmp['author']=row[2]
-                        restmp['title']=row[1]
-                        restmp['book_intro']=row[3]
-                        restmp['current_price']=current_price
-                        restmp['stock_level']=stock
-                        restmp['store_id']=store_id
-                        res.append(restmp)
-                #根据book_id和字典确定author的搜索结果。
-                time2=time.time()
-                timetmp={}
-                timetmp['time complexity res']=time2-time1
-                res.insert(0,timetmp)
-                if(len(res)==1):
-                    restmp={}
-                    restmp['error_code[598]']="本店一本也没有！"
-                    res.append(restmp)
-                    return 598,res
-                return 200,res
-            else:
-                restmp={}
-                restmp['error_code[599]']="书库和本店一本也没有！"
-                res.append(restmp)
-                return 599,res
-    
-
-    def search_functions(self,store_id:str,search_type:str,search_input:str,field:str)->(int, [dict]):
-        time1=time.time()
-        res=[]
-        resglobal=[]
-        # 下面这种模糊查询的方式是不好用的
-        rows=self.session.execute("SELECT DISTINCT book_id FROM %s WHERE tsv_column @@ '%s'"%(field,search_input)).fetchall()
-        print("SELECT book_id FROM %s WHERE tsv_column @@ '%s'"%(field,search_input))
-        # rows=self.session.execute("SELECT book_id from search_author where author like '%s' order by search_id" % ('%'+search_input+'%')).fetchall()
-        if len(rows)!=0:
-            for row in rows:
-                restmp={}
-                book_global_id=row[0]#?
-                ans=self.session.execute("SELECT author,title,book_intro,original_price,tags from book where book_id ='%s' " % (book_global_id)).fetchone()
-                restmp['book_id']=book_global_id
-                restmp['author']=ans[0]
-                restmp['title']=ans[1]
-                restmp['book_intro']=ans[2]
-                restmp['price']=ans[3]
-                restmp['tags']=ans[4]
-                resglobal.append(restmp) 
-        else:
-            restmp={}
-            restmp['error_code[597]']="书库里找不到这个结果"
-            res.append(restmp)
-            return 599,res
-        if search_type=='global':
-            #需要加图再加图
-            time2=time.time()
-            timetmp={}
-            timetmp['time complexity res']=time2-time1
-            resglobal.insert(0,timetmp)   
-            return 200,resglobal
-        elif search_type=='instore': # 待DEBUG(应该是好的)
-            # 首先获取该店的图书信息
-            # 先要加store id不对的边缘检测?
-            rows_likely_in_store=self.session.execute(
-                "SELECT DISTINCT book_id,title,author,book_intro,tags from book where book.book_id in (SELECT DISTINCT book_id FROM %s WHERE tsv_column @@ '%s');"% (field,search_input)
-                ).fetchall()
-            # print(  "SELECT DISTINCT book_id,title,author,book_intro from book where book.book_id in (SELECT DISTINCT book_id FROM search_author WHERE tsv_column @@ '%s');"% (search_input))
-            if len(rows_likely_in_store)!=0:
-                for row in rows_likely_in_store:
-                    book_instore_id=row[0]#先获取book_id，毕竟一个书店有的书和全局有的书数据量相比还是小的
-                    restmp={}
-                    ans=self.session.execute("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id)).fetchone()
-                    if ans ==None:
-                        # 测试用
-                        # restmp={}
-                        # restmp['error_code[599]']="这本没有哦!"
-                        # res.append(restmp)
-                        continue
-                    else:
-                        print("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id))
-                        stock=ans[0]
-                        current_price=[1]
-                        restmp['book_id']=row[0]
-                        restmp['author']=row[2]
-                        restmp['title']=row[1]
-                        restmp['book_intro']=row[3]
-                        restmp['book_tags']=row[3]
-                        restmp['current_price']=current_price
-                        restmp['stock_level']=stock
-                        restmp['store_id']=store_id
-                        res.append(restmp)
-                #根据book_id和字典确定author的搜索结果。
-                time2=time.time()
-                timetmp={}
-                timetmp['time complexity res']=time2-time1
-                res.insert(0,timetmp)
-                if(len(res)==1):
-                    restmp={}
-                    restmp['error_code[598]']="本店一本也没有！"
-                    res.append(restmp)
-                    return 599,res
-                return 200,res
-            else:
-                restmp={}
-                restmp['error_code[599]']="书库和本店一本也没有！"
-                res.append(restmp)
-                return 599,res
+ 
     def search_history_status(self,buyer_id:str,flag:int):
         try:
             if not self.user_id_exist(buyer_id):
@@ -544,6 +386,24 @@ class Buyer(db_conn.DBConn):
                         ]
                     })
                 self.session.close()
+            if flag==5:
+                record_list4=self.session.query(New_order_canceled).filter(New_order_canceled.buyer_id==buyer_id,New_order_canceled.cancel_time!=None)
+                print(record_list4)
+                records=[]
+                for record in record_list4:
+                    record_infos = self.session.query(New_order_detail).filter_by(order_id=record.order_id).all()
+                    records.append({
+                    "order_id":record.order_id,
+                    "buyer_id": record.buyer_id,
+                    "store_id": record.store_id,
+                    "cancel_time":record.cancel_time,
+                    "status":'已取消',
+                    "book_list": [
+                        {"book_id": rei.book_id, "count": rei.count, "price": rei.price}
+                        for rei in record_infos
+                        ]
+                    })
+                self.session.close()
 
         except BaseException as e:
             return 530, "{}".format(str(e)), []
@@ -589,7 +449,11 @@ class Buyer(db_conn.DBConn):
                 #已发货 无法取消 需要申请售后
                 #无法取消
                 return error.error_invalid_order_id(order_id)
-       
+        #加入new_order_cancel中
+        timenow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cancel_order = New_order_canceled(order_id=order_id, buyer_id=buyer_id ,store_id=store_id,  price=price,cancel_time=timenow)
+        self.session.add(cancel_order)
+        self.session.commit()
         #加库存
         store=self.session.query(Store).filter_by(store_id=store_id)
         stores=store.first()
@@ -612,10 +476,8 @@ class Buyer(db_conn.DBConn):
         resglobal=[]
         # 下面这种模糊查询的方式是不好用的
         # EXPLAIN ANALYZE SELECT DISTINCT book_id FROM search_book_intro  WHERE tsv_column @@ '美丽' LIMIT 100
-
+        # 首先利用索引搜索全局
         rows=self.session.execute("SELECT DISTINCT book_id FROM %s WHERE tsv_column @@ '%s' LIMIT 100"%(field,search_input)).fetchall()
-        # print("SELECT book_id FROM %s WHERE tsv_column @@ '%s'"%(field,search_input))
-        # rows=self.session.execute("SELECT book_id from search_author where author like '%s' order by search_id" % ('%'+search_input+'%')).fetchall()
         if len(rows)!=0:
             for row in rows:
                 restmp={}
@@ -640,50 +502,41 @@ class Buyer(db_conn.DBConn):
             timetmp['time complexity res']=time2-time1
             resglobal.insert(0,timetmp)   
             return 200,resglobal
-        elif search_type=='instore': # 待DEBUG(应该是好的)
+        else : # 待DEBUG(应该是好的)
             # 首先获取该店的图书信息
             # 先要加store id不对的边缘检测?
+            res=[]
             rows_likely_in_store=self.session.execute(
                 "SELECT DISTINCT book_id,title,author,book_intro,tags from book where book.book_id in (SELECT DISTINCT book_id FROM %s WHERE tsv_column @@ '%s' LIMIT 100);"% (field,search_input)
                 ).fetchall()
-            # print(  "SELECT DISTINCT book_id,title,author,book_intro from book where book.book_id in (SELECT DISTINCT book_id FROM search_author WHERE tsv_column @@ '%s');"% (search_input))
-            if len(rows_likely_in_store)!=0:
-                for row in rows_likely_in_store:
-                    book_instore_id=row[0]#先获取book_id，毕竟一个书店有的书和全局有的书数据量相比还是小的
-                    restmp={}
-                    ans=self.session.execute("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id)).fetchone()
-                    if ans ==None:
-                        # 测试用
-                        # restmp={}
-                        # restmp['error_code[599]']="这本没有哦!"
-                        # res.append(restmp)
-                        continue
-                    else:
-                        print("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id))
-                        stock=ans[0]
-                        current_price=[1]
-                        restmp['book_id']=row[0]
-                        restmp['author']=row[2]
-                        restmp['title']=row[1]
-                        restmp['book_intro']=row[3]
-                        restmp['book_tags']=row[3]
-                        restmp['current_price']=current_price
-                        restmp['stock_level']=stock
-                        restmp['store_id']=store_id
-                        res.append(restmp)
-                #根据book_id和字典确定author的搜索结果。
-                time2=time.time()
-                timetmp={}
-                timetmp['time complexity res']=time2-time1
-                res.insert(0,timetmp)
-                if(len(res)==1):
-                    restmp={}
-                    restmp['error_code[598]']="本店一本也没有！"
-                    res.append(restmp)
-                    return 599,res
-                return 200,res
-            else:
+            
+            for row in rows_likely_in_store:
+                book_instore_id=row[0]#先获取book_id，毕竟一个书店有的书和全局有的书数据量相比还是小的
                 restmp={}
-                restmp['error_code[599]']="书库和本店一本也没有！"
+                ans=self.session.execute("SELECT stock_level,price FROM store where store_id = '%s' and book_id = '%s'"%(store_id,book_instore_id)).fetchone()
+                if ans ==None:
+                    continue
+                else:
+                    stock=ans[0]
+                    current_price=[1]
+                    restmp['book_id']=row[0]
+                    restmp['author']=row[2]
+                    restmp['title']=row[1]
+                    restmp['book_intro']=row[3]
+                    restmp['book_tags']=row[4]
+                    restmp['current_price']=current_price
+                    restmp['stock_level']=stock
+                    restmp['store_id']=store_id
+                    res.append(restmp)
+                #根据book_id和字典确定author的搜索结果。
+            time2=time.time()
+            timetmp={}
+            timetmp['time complexity res']=time2-time1
+            res.insert(0,timetmp)
+            if(len(res)==1):
+                restmp={}
+                restmp['error_code[598]']="本店一本也没有！"
                 res.append(restmp)
                 return 599,res
+            return 200,res
+            

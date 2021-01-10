@@ -51,8 +51,9 @@ class Seller(db_conn.DBConn):
             #判断书是否已经加在书里
             #row = self.session.execute("SELECT book_id FROM book WHERE book_id = '%s';" % (book_id,)).fetchone()
             
-            row=self.session.query(BookWhole).filter_by(book_id=book_id).first()
-            if row is None:
+            #row=self.session.query(BookWhole).filter_by(book_id=book_id).first()
+            ##注释了插入书的部分
+            #if row is None:
                 # book = json.loads(book_json_str)
                 # thelist = []  # 由于没有列表类型，故使用将列表转为text的办法
                 # for tag in book.get('tags'):
@@ -75,28 +76,28 @@ class Seller(db_conn.DBConn):
                 #          'book_intro': book['book_intro'],
                 #          'content': book['content'], 'tags': book['tags']})
                 #####注意这里还未尝试插图片！！！！后期加
-                books = BookWhole()
-                books.book_id = book['id']
-                books.title = book['title']
+                # books = BookWhole()
+                # books.book_id = book['id']
+                # books.title = book['title']
                 
-                books.author= book['author']
-                books.publisher=book['publisher']
-                books.original_title= book['original_title']
-                books.translator=book['translator']
-                books.pub_year=book['pub_year']
-                books.pages=book['pages']
-                books.original_price=book['price']
+                # books.author= book['author']
+                # books.publisher=book['publisher']
+                # books.original_title= book['original_title']
+                # books.translator=book['translator']
+                # books.pub_year=book['pub_year']
+                # books.pages=book['pages']
+                # books.original_price=book['price']
                          
-                books.binding=book['binding']
-                books.isbn=book['isbn']
-                books.author_intro=book['author_intro']
-                books.book_intro=book['book_intro']
-                books.content= book['content']
-                books.tags=book['tags']
+                # books.binding=book['binding']
+                # books.isbn=book['isbn']
+                # books.author_intro=book['author_intro']
+                # books.book_intro=book['book_intro']
+                # books.content= book['content']
+                # books.tags=book['tags']
                 
-                self.session.add(books)
-                print("book info success")
-                self.session.commit()
+                # self.session.add(books)
+                # print("book info success")
+                # self.session.commit()
             store=Store()
             store.book_id=int(book_id)
             store.store_id=store_id
