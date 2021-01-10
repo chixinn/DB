@@ -59,6 +59,40 @@ class BookWhole(Base):
 
 - ER图位置： init_db/ER图.png
 
+# 2021.1.8 更新 数据库new_order_detail优化(wwq)
+应用驱动优化
+
+由于在查询历史订单功能中遇到之前的表结构查询效率较慢，需要查询一个buyer的所有订单时，要在usr_store里查user买过的store的store_id, 再在store查买过的book_id 再在new_order_detail查book_id对应的具体信息。
+
+故在new_order_detail中添加冗余，添加store_id和buyer_id。
+
+这样的修改方便用户查询所有订单信息，也方便卖家查自己店铺的所有订单信息。
+
+```python
+# 订单明细表
+class New_order_detail(Base):
+    __tablename__ = 'new_order_detail'
+    order_id = Column(String(512), nullable=False)
+    book_id = Column(Integer, nullable=False)
+    store_id=Column(String(256), ForeignKey('user_store.store_id'), nullable=False)
+    buyer_id=Column(String(256), ForeignKey('usr.user_id'), nullable=False)
+    count = Column(Integer, nullable=False)
+    price = Column(Integer, nullable=False)
+    __table_args__ = (
+        PrimaryKeyConstraint('order_id', 'book_id'),
+        {},
+    )
+```
+
+由于数据库的修改，需要对应修改init_database的数据初始化以及buyer.py中的new_order函数
+
+```python
+ new_order_info = New_order_detail(order_id=uid, book_id=book_id,buyer_id=user_id ,store_id=store_id, count=count, price=price)
+                self.session.add(new_order_info)
+```
+
+从而避免向非空属性插入空值的报错
+
 # 2021.1.9 更新  Search搜索库建立更新 (cxn)
 最终数据库执行顺序:
 1. init_database.py
