@@ -129,8 +129,7 @@ class BookWhole(Base):
     book_intro = Column(Text,nullable=True)
     content = Column(Text,nullable=True)
     tags = Column(Text,nullable=True)
-
-
+    picture=Column(LargeBinary)
 
 
 
