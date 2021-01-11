@@ -57,6 +57,8 @@ class SearchTitle(Base):
 
 事实证明，对于这种用户输入字段的前后部分都是用了`%`的情况，尤其是相当于搜索`%s`时，即后缀匹配的情况时，我们建立在主键上默认的B树索引即失去了范围查询中的效率。所以，这种模糊查询的方式是不佳的。
 
+使用`EXPLAIN ANAYLYZE`语句查看这种模糊匹配
+
 后缀匹配时会导致我们的索引失效，最终还是全表扫描，在信息检索系统中，通过构建**轮排索引**可以避免这种全表扫描。
 
 ### 全文索引--postgresql全文索引GIN索引
@@ -101,7 +103,7 @@ PSQL本身是不支持全文索引的，所以在分词解释器没有构建的�
 
 ###### Search_author
 
-在对author字段进行索引的构建的时候，我尝试了3种分词方式，当然这3种分词方式本身也受：
+在对author字段进行分词初步索引的构建的时候，我尝试了3种分词方式，当然这3种分词方式本身也受：
 
 1. 模拟用户输入的最长前缀：
 
@@ -160,7 +162,7 @@ title字段和author字段都是短文本，他们最显著的区别是，姓名
 ```sql
 ALTER TABLE search_author ADD COLUMN tsv_column tsvector;           
 UPDATE search_author SET tsv_column = to_tsvector('zh', coalesce(author,''));   
-CREATE INDEX idx_gin_author ON search_author USING GIN(tsv_column);  
+CREATE INDEX idx_gin_author ON search_author USING GIN(tsv_column); // 
 CREATE TRIGGER trigger_name BEFORE INSERT OR UPDATE  ON search_author FOR EACH ROW EXECUTE PROCEDURE
 tsvector_update_trigger(tsv_column, 'zh', author);
 ```
@@ -187,11 +189,13 @@ PotsgreSQL提供的pg_trgm的扩展中有两种索引类型，一个是`gin`，�
 
 ##### 搜索性能比较
 
-以数据量最大的`TABLE search_book_intro`
+以数据量最大的`TABLE search_book_intro`为例子
 
 ![截屏2021-01-10 20.58.19](https://tva1.sinaimg.cn/large/008eGmZEly1gmiwbkmqtpj30vq05u75p.jpg)
 
 由上图可见数据量为70w行数据
+
+###### 在tsp_column上构建GIN索引
 
 ![截屏2021-01-10 20.59.48](https://tva1.sinaimg.cn/large/008eGmZEly1gmiwd67ntcj30z605umz6.jpg)
 
@@ -201,11 +205,33 @@ PotsgreSQL提供的pg_trgm的扩展中有两种索引类型，一个是`gin`，�
 
 第二次搜索`search_book_intro`关键词`世界`，用时为`0.006S`
 
-可以通过`EXPLAIN ANALYZE`命令查看两种搜索方式的明显对比
+![截屏2021-01-10 21.04.17](https://tva1.sinaimg.cn/large/008eGmZEgy1gmjg1rdiicj315g0f8jv0.jpg)
 
-![截屏2021-01-10 21.04.17](https://tva1.sinaimg.cn/large/008eGmZEly1gmiwhr62y5j315g0f8n6i.jpg)
+###### 因为提前进行了外部分词，利用主键索引进行搜索
+
+可以通过`EXPLAIN ANALYZE`命令查看两种搜索方式的对比
 
 ![截屏2021-01-10 21.08.59](https://tva1.sinaimg.cn/large/008eGmZEly1gmiwmp5hofj315g0h8gv3.jpg)
+
+###### 没有提前进行外部分词，直接使用模糊查询的前后缀匹配
+
+在没有进行分词的4w条数据上，直接进行前后缀匹配的模糊查询：
+
+`SELECT * FROM book WHERE book_intro like '%生活%'`
+
+![截屏2021-01-11 10.31.47](/Users/chixinning/Library/Application Support/typora-user-images/截屏2021-01-11 10.31.47.png)
+
+`SELECT * FROM book WHERE book_intro like '生活%'`
+
+![截屏2021-01-11 10.38.01](https://tva1.sinaimg.cn/large/008eGmZEgy1gmjk0h0f8aj30yk06m0vj.jpg)
+
+`SELECT * FROM book WHERE book_intro like '%生活'`
+
+![截屏2021-01-11 10.38.25](https://tva1.sinaimg.cn/large/008eGmZEgy1gmjk0w3u89j30yk06m0vk.jpg)
+
+可以很明显的看出，无论是前缀匹配还是后缀匹配中，即使是在book_intro字段建立了索引，这个执行时间也很可怕。是用户难以忍受的。
+
+![截屏2021-01-11 10.42.41](https://tva1.sinaimg.cn/large/008eGmZEgy1gmjk5bsem5j315k072jv4.jpg)
 
 ## 分页查询
 
@@ -267,15 +293,35 @@ Execution Time: 36.407 ms
 
 ![截屏2021-01-10 21.21.20](https://tva1.sinaimg.cn/large/008eGmZEly1gmiwzj9777j31cq062wgq.jpg)![截屏2021-01-10 21.23.17](https://tva1.sinaimg.cn/large/008eGmZEly1gmix1llovxj31cq0dy10k.jpg)
 
+## 后端代码实现
+
+逻辑上来讲，任何一家书店拥有的书的数量，跟整个图书商城，比如当当，淘宝整个全站搜索库里的书的数量相比是很少的，所以，seachDB的四张表中的都是针对全部book库中的数据，对于每一个店家，没有额外进行建表的必要。
+
+所以，在`SQL`查询语句确定了以后，后端实现的逻辑如下：
+
+1. 首先获得book_db库中符合全局搜索的`book_id`
+2. 对于全局搜索直接返回
+3. 对于本店搜索，则使用子查询，搜索本店和全局检索出的`book_id`重复的部分。
+
+为了节省篇幅，在此即不附后端实现的代码了，具体可以见`be/model1/buyer.py`下面的`search_functions_limit`函数。
+
 ## 总结与提升
+
+`SELECT * FROM search_author WHERE tsv_column @@'杨红'`
 
 ![截屏2021-01-10 21.31.11](https://tva1.sinaimg.cn/large/008eGmZEly1gmix9tk1rhj31cq0oqal5.jpg)
 
-[![截屏2021-01-10 21.31.47](https://tva1.sinaimg.cn/large/008eGmZEly1gmixaehqbgj31cq05mmzh.jpg)
+`SELECT * FROM search_author WHERE tsv_column @@'红樱'`
+
+![截屏2021-01-10 21.31.47](https://tva1.sinaimg.cn/large/008eGmZEly1gmjjws5fvzj31cq05maam.jpg)
+
+`SELECT * FROM search_author WHERE tsv_column @@'樱'`
 
 ![截屏2021-01-10 21.32.28](https://tva1.sinaimg.cn/large/008eGmZEly1gmixbcyvb9j31cq0nk778.jpg)
 
-从上面这三个很简单的例子可以看出，搜索系统中最关注的准确率和召回率的提升，应更多的从分词规则的角度进行考虑，在数据库+信息检索的方面有待提升
+从上面这三个很简单的例子可以看出，搜索系统中最关注的准确率和召回率的提升，应更多的从分词规则的角度进行考虑，在数据库+信息检索的方面有待提升。
+
+> 一般的，在检索系统中，人们倾向于接受不那么相关的结果，而不是返回一个0结果值的检索系统。
 
 ## 理论reference
 
