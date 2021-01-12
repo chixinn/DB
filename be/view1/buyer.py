@@ -90,6 +90,7 @@ def search_history_status():
     
     code, message,ret = b.search_history_status(user_id,flag)
     return jsonify({"message": message,"history record": ret}), code
+
 @bp_buyer.route("/cancel", methods=["POST"])
 def cancel():
     user_id: str = request.json.get("buyer_id")
@@ -98,3 +99,9 @@ def cancel():
     code, message = b.cancel(user_id,order_id)
     return jsonify({"message": message}), code
 
+@bp_buyer.route("/test_auto_cancel", methods=["POST"])
+def test_auto_cancel():
+    order_id: str = request.json.get("order_id")
+    b = Buyer()
+    code, message = b.test_auto_cancel(order_id)
+    return jsonify({"message": message}), code

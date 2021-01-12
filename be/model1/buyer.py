@@ -11,6 +11,11 @@ import time
 from init_db.init_database import Store,Users,User_store
 from init_db.init_database import New_order_detail,New_order_undelivered
 from init_db.init_database import New_order_unpaid,New_order_unreceived,New_order_canceled
+#======如果不运行自动取消订单，请注释掉以下部分
+import redis #为了实现自动删除超时订单
+#连接redis数据库
+r=redis.StrictRedis(host='localhost',port=6379,db=0,decode_responses=True)
+#===================
 class Buyer(db_conn.DBConn):
     def __init__(self):
         db_conn.DBConn.__init__(self)
@@ -95,6 +100,10 @@ class Buyer(db_conn.DBConn):
             self.session.add(new_order_unpaid)
             self.session.commit()
             self.session.close()
+            print("order_id",uid)
+            #===============注释掉
+            r.setex(uid,15,'order') #先设置30s，测试好之后再改成其他时间
+            #===============
             order_id = uid
         except sqlite.Error as e:
             logging.info("528, {}".format(str(e)))
@@ -469,6 +478,18 @@ class Buyer(db_conn.DBConn):
         self.session.close()
         return 200, 'ok'
     
+    def test_auto_cancel(self,order_id:str):
+        unpaid=self.session.query(New_order_unpaid).filter(New_order_unpaid.order_id==order_id).first()
+        canceled=self.session.query(New_order_canceled).filter(New_order_canceled.order_id==order_id).first()
+        if unpaid !=None and canceled ==None:
+            return 600,'未删除失效订单'
+        elif unpaid == None and canceled != None:
+            return 200,'ok'
+        elif unpaid == None and canceled ==None:
+            return 518,'订单失踪'
+        else:
+            return 518,'订单冲突'
+
     # EXPLAIN ANALYZE SELECT DISTINCT book_id FROM search_book_intro  WHERE tsv_column @@ '美丽' LIMIT 100
     def search_functions_limit(self,store_id:str,search_type:str,search_input:str,field:str)->(int, [dict]):
         time1=time.time()
@@ -539,4 +560,3 @@ class Buyer(db_conn.DBConn):
                 res.append(restmp)
                 return 599,res
             return 200,res
-            

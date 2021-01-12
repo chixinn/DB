@@ -68,6 +68,15 @@ class Buyer:
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, json=json)
         return r.status_code 
+    
+    def auto_cancel(self,order_id:str):
+        json={"order_id":order_id}
+        url=urljoin(self.url_prefix,"test_auto_cancel")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, json=json)
+        response_json = r.json()
+        return r.status_code
+
     def search_functions_limit(self,store_id:str,search_type:str,search_input:str,field:str)->(int, [dict]):
         json = {"store_id": store_id, 
         "search_type": search_type,
