@@ -55,12 +55,12 @@ class BookWhole(Base):
     book_intro = Column(Text,nullable=True)
     content = Column(Text,nullable=True)
     tags = Column(Text,nullable=True)
-    # picture = Column(LargeBinary,nullable=True)#暂时测一下
-class BookImages(Base):
-    __tablename__ = 'book_images'#postgresql天生不区分大小写
-    picture_id = Column(Integer, primary_key=True,autoincrement=True)
-    book_id = Column(Integer, ForeignKey("book.book_id"))
-    picture_binary = Column(LargeBinary,nullable=True) # 图片命名：userId + 上传时间戳
+    picture = Column(LargeBinary,nullable=True)#暂时测一下
+# class BookImages(Base):
+#     __tablename__ = 'book_images'#postgresql天生不区分大小写
+#     picture_id = Column(Integer, primary_key=True,autoincrement=True)
+#     book_id = Column(Integer, ForeignKey("book.book_id"))
+#     picture_binary = Column(LargeBinary,nullable=True) # 图片命名：userId + 上传时间戳
 
 class BookDB:
     def __init__(self, large: bool = False):
@@ -73,8 +73,8 @@ class BookDB:
         if large:
             self.book_db = self.db_l
         else:
-            #self.book_db = "D:/这学期/数据管理系统/大作业/项目/DB/fe/data/book.db"
-            self.book_db=self.db_s
+            self.book_db = "D:/这学期/数据管理系统/大作业/项目/DB/fe/data/book.db"
+            # self.book_db=self.db_s
 
     def get_book_count(self):
         conn = sqlite.connect(self.book_db)
@@ -153,9 +153,9 @@ class BookDB:
 
         for row in cursor:
             book = BookWhole()
-            book_pic=BookImages()
+            # book_pic=BookImages()
             # book=BookWhole(title=row[1],author=row[2],publisher=row[3],)
-            # book.book_id = row[0]
+            book.book_id = row[0]
             book.title = row[1]
             book.author = row[2]
             book.publisher = row[3]
@@ -180,6 +180,7 @@ class BookDB:
                 if tag.strip() != "":
                     tagListPostgresql.append(tag)
             book.tags=tagListPostgresql
+            book.picture=picture
             # if picture is not None:
             #     # book.picture=picture
             #     book_pic.book_id=book.book_id
@@ -198,7 +199,7 @@ if __name__ == '__main__':
     # bookdb.get_book_info(1,10)#这里更改数目
     #Base.metadata.drop_all(engine)#drop掉旧的
     Base.metadata.create_all(engine)
-    bookdb.init_postgresql(5,10)#这更改初始化的图书数目
+    bookdb.init_postgresql(0,100)#这更改初始化的图书数目
 
     # session.close()
 

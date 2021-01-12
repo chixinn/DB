@@ -280,7 +280,7 @@ Headers:
 
 ```json
 {
-  "buyer_id": "user_id",
+  "buyer_id": "$user_id$",
   "order_id": "$order id$"
   
 }
